@@ -44,6 +44,8 @@ interface UploadedFile {
   type: string;
   status: 'uploading' | 'completed' | 'error';
   progress: number;
+  content?: string;
+  file?: File;
 }
 
 interface ApiConfig {
@@ -114,6 +116,24 @@ export default function Home() {
   const callRealAI = async (message: string, model: string): Promise<string> => {
     const { configs } = apiSettings;
     
+    // Prepare context from uploaded files
+    const completedFiles = uploadedFiles.filter(f => f.status === 'completed' && f.content);
+    let contextPrompt = message;
+    
+    if (completedFiles.length > 0) {
+      const fileContexts = completedFiles.map(file => 
+        `--- Content from ${file.name} ---\n${file.content}\n--- End of ${file.name} ---\n`
+      ).join('\n');
+      
+      contextPrompt = `Please analyze the following uploaded documents and answer the user's question based on the content:
+
+${fileContexts}
+
+User Question: ${message}
+
+Please provide a detailed analysis based on the uploaded documents. If the documents don't contain relevant information to answer the question, please indicate that and provide general guidance.`;
+    }
+    
     try {
       if (model === 'chatgpt' && configs.openai) {
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -127,14 +147,14 @@ export default function Home() {
             messages: [
               {
                 role: 'system',
-                content: 'You are an economics expert. Provide detailed, accurate responses about economic theories, concepts, and analysis.'
+                content: 'You are an economics expert. Analyze uploaded documents and provide detailed, accurate responses about economic theories, concepts, and analysis based on the provided content.'
               },
               {
                 role: 'user',
-                content: message
+                content: contextPrompt
               }
             ],
-            max_tokens: 1000,
+            max_tokens: 2000,
             temperature: 0.7,
           }),
         });
@@ -156,7 +176,7 @@ export default function Home() {
           body: JSON.stringify({
             contents: [{
               parts: [{
-                text: `As an economics expert, please provide a detailed response to: ${message}`
+                text: `As an economics expert, please analyze the provided documents and respond to the question:\n\n${contextPrompt}`
               }]
             }]
           }),
@@ -201,6 +221,19 @@ export default function Home() {
     
     const modelResponses = responses[model as keyof typeof responses];
     const randomResponse = modelResponses[Math.floor(Math.random() * modelResponses.length)];
+    
+    // Check if there are uploaded files with content
+    const completedFiles = uploadedFiles.filter(f => f.status === 'completed' && f.content);
+    
+    if (completedFiles.length > 0) {
+      return `${randomResponse} 
+
+Based on the ${completedFiles.length} document(s) you've uploaded (${completedFiles.map(f => f.name).join(', ')}), I can see that your question about "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}" relates to the economic concepts and data presented in these materials.
+
+[DEMO MODE] In the full version with API keys configured, I would provide a detailed analysis of your uploaded documents. For now, this is a simulated response. Please configure your API keys in the settings to enable real document analysis.
+
+The uploaded files contain valuable economic information that would be analyzed in detail with real AI integration.`;
+    }
     
     return `${randomResponse} Your question about "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}" is an excellent inquiry. In economics, this involves supply and demand relationships, market efficiency, consumer behavior, and many other aspects. Let me explain in detail...`;
   };
@@ -273,7 +306,8 @@ export default function Home() {
         size: file.size,
         type: file.type,
         status: 'uploading',
-        progress: 0
+        progress: 0,
+        file: file
       };
       
       setUploadedFiles(prev => [...prev, uploadedFile]);
@@ -299,7 +333,7 @@ export default function Home() {
       
       if (progress >= 100) {
         clearInterval(interval);
-        // Mark as completed after a short delay
+        // Mark as completed and read file content
         setTimeout(() => {
           setUploadedFiles(prev => 
             prev.map(file => 
@@ -308,6 +342,8 @@ export default function Home() {
                 : file
             )
           );
+          // Read file content after completion
+          processFileContent(fileId);
         }, 300);
       }
     }, 200 + Math.random() * 300); // Random interval between 200-500ms
@@ -345,6 +381,142 @@ export default function Home() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Basic EPUB text extraction (simplified approach)
+  const extractEpubText = async (file: File): Promise<string> => {
+    try {
+      // EPUB files are ZIP archives, but we'll attempt a basic text extraction
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      let text = '';
+      
+      // Convert to string and look for readable text patterns
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      const content = decoder.decode(uint8Array);
+      
+      // Basic text extraction - look for content between tags
+      const textMatches = content.match(/>([^<]+)</g);
+      if (textMatches) {
+        text = textMatches
+          .map(match => match.slice(1, -1).trim())
+          .filter(text => text.length > 10 && !/^[\d\s\W]*$/.test(text))
+          .join(' ')
+          .slice(0, 5000); // Limit to first 5000 characters
+      }
+      
+      if (text.length > 100) {
+        return `[EPUB EBOOK: ${file.name}]\nExtracted content preview:\n\n${text}`;
+      } else {
+        return `[EPUB EBOOK: ${file.name}]\nNote: Could not extract readable text. Please convert to .txt or .md format for better results.`;
+      }
+    } catch (error) {
+      return `[EPUB EBOOK: ${file.name}]\nNote: Error reading EPUB file. Please convert to .txt or .md format.`;
+    }
+  };
+
+  // Basic MOBI text extraction attempt
+  const extractMobiText = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // MOBI files have a specific structure, try basic text extraction
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      const content = decoder.decode(uint8Array);
+      
+      // Look for readable text patterns in MOBI format
+      const textMatches = content.match(/[A-Za-z][A-Za-z\s.,!?;:'"()-]{20,}/g);
+      if (textMatches && textMatches.length > 0) {
+        const text = textMatches
+          .slice(0, 50) // Take first 50 matches
+          .join(' ')
+          .slice(0, 5000); // Limit to first 5000 characters
+        
+        if (text.length > 100) {
+          return `[MOBI EBOOK: ${file.name}]\nExtracted content preview:\n\n${text}`;
+        }
+      }
+      
+      return `[MOBI EBOOK: ${file.name}]\nNote: Could not extract readable text. Please convert to .txt or .md format using Calibre for better results.`;
+    } catch (error) {
+      return `[MOBI EBOOK: ${file.name}]\nNote: Error reading MOBI file. Please convert to .txt or .md format.`;
+    }
+  };
+
+  // Read file content based on file type
+  const readFileContent = async (file: File): Promise<string> => {
+    const fileName = file.name.toLowerCase();
+    
+    // Handle EPUB and MOBI files with special extraction
+    if (fileName.endsWith('.epub') || file.type === 'application/epub+zip') {
+      return await extractEpubText(file);
+    } else if (fileName.endsWith('.mobi') || file.type === 'application/x-mobipocket-ebook') {
+      return await extractMobiText(file);
+    }
+    
+    // Handle other formats with FileReader
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        
+        if (file.type === 'text/plain' || fileName.endsWith('.txt')) {
+          resolve(result);
+        } else if (fileName.endsWith('.md') || fileName.endsWith('.markdown') || file.type === 'text/markdown') {
+          // Markdown files - read as text and add format note
+          resolve(`[MARKDOWN FILE: ${file.name}]\n\n${result}`);
+        } else if (file.type === 'application/pdf' || fileName.endsWith('.pdf')) {
+          // For now, we'll show a message that PDF parsing is not yet implemented
+          resolve(`[PDF FILE: ${file.name}]\nNote: PDF content extraction is not yet implemented. Please copy and paste the text content manually or convert to .txt format.`);
+        } else if (file.type.includes('word') || fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+          // For now, we'll show a message that DOCX parsing is not yet implemented
+          resolve(`[WORD DOCUMENT: ${file.name}]\nNote: Word document content extraction is not yet implemented. Please copy and paste the text content manually or convert to .txt format.`);
+        } else {
+          // Try to read as text anyway for other formats
+          try {
+            resolve(`[UNKNOWN FORMAT: ${file.name}]\nAttempting to read as text:\n\n${result}`);
+          } catch {
+            resolve(`[UNSUPPORTED FORMAT: ${file.name}]\nThis file format is not fully supported. Please convert to TXT, MD, or other supported formats.`);
+          }
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error(`Failed to read file: ${file.name}`));
+      };
+      
+      reader.readAsText(file);
+    });
+  };
+
+  // Process uploaded file content
+  const processFileContent = async (fileId: string) => {
+    const file = uploadedFiles.find(f => f.id === fileId);
+    if (!file || !file.file) return;
+
+    try {
+      const content = await readFileContent(file.file);
+      
+      setUploadedFiles(prev => 
+        prev.map(f => 
+          f.id === fileId 
+            ? { ...f, content: content }
+            : f
+        )
+      );
+    } catch (error) {
+      console.error('Failed to read file content:', error);
+      
+      setUploadedFiles(prev => 
+        prev.map(f => 
+          f.id === fileId 
+            ? { ...f, status: 'error' }
+            : f
+        )
+      );
+    }
   };
 
   const features = [
@@ -835,7 +1007,9 @@ export default function Home() {
                         }`}>
                           {isDragOver ? 'Release to upload files' : 'Drop your economics documents here'}
                         </p>
-                        <p className="text-sm text-gray-500 mb-4">Supports PDF, DOCX, TXT files</p>
+                        <p className="text-sm text-gray-500 mb-4">
+                          Supports TXT & MD (full content) • PDF, DOCX, EPUB, MOBI (basic support - convert to TXT/MD for best results)
+                        </p>
                         <Button variant="outline" onClick={handleFileSelect}>
                           Browse Files
                         </Button>
@@ -843,7 +1017,7 @@ export default function Home() {
                           ref={fileInputRef}
                           type="file"
                           multiple
-                          accept=".pdf,.docx,.doc,.txt"
+                          accept=".pdf,.docx,.doc,.txt,.md,.markdown,.epub,.mobi"
                           onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
                           className="hidden"
                         />
@@ -863,6 +1037,12 @@ export default function Home() {
                                   <div>
                                     <p className="text-sm font-medium">{file.name}</p>
                                     <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                                    {file.status === 'completed' && file.content && (
+                                      <p className="text-xs text-green-600">✓ Content ready for AI analysis</p>
+                                    )}
+                                    {file.status === 'completed' && !file.content && (
+                                      <p className="text-xs text-yellow-600">⚠ Content extraction failed</p>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="flex items-center space-x-2">
@@ -892,6 +1072,20 @@ export default function Home() {
                                   </div>
                                 </div>
                               )}
+                              {file.status === 'completed' && file.content && (
+                                <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                                  <div className="flex justify-between items-center mb-1">
+                                    <span className="font-medium text-gray-700">Content Preview:</span>
+                                    <span className="text-gray-500">{file.content.length} characters</span>
+                                  </div>
+                                  <div className="text-gray-600 max-h-20 overflow-y-auto">
+                                    {file.content.length > 200 
+                                      ? `${file.content.substring(0, 200)}...` 
+                                      : file.content
+                                    }
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -917,7 +1111,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-12 mb-16">
+          <div className="grid md:grid-cols-2 gap-12 mb-16">
             {/* Government & International Organizations */}
             <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader>
