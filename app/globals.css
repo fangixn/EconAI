@@ -128,4 +128,93 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
   }
+
+  /* 对话框强制颜色覆盖 - 确保最佳可读性 */
+  .econai-dialog {
+    background: white !important;
+    color: #0f172a !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  .econai-dialog h2,
+  .econai-dialog [data-radix-dialog-title] {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    font-size: 1.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .econai-dialog p,
+  .econai-dialog [data-radix-dialog-description] {
+    color: #334155 !important;
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .econai-dialog label {
+    color: #0f172a !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    display: block !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .econai-dialog input {
+    color: #0f172a !important;
+    background: white !important;
+    border: 2px solid #cbd5e1 !important;
+    padding: 0.75rem !important;
+    font-size: 1rem !important;
+    border-radius: 0.5rem !important;
+    width: 100% !important;
+  }
+
+  .econai-dialog input::placeholder {
+    color: #64748b !important;
+    opacity: 1 !important;
+  }
+
+  .econai-dialog input:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    outline: none !important;
+  }
+
+  /* Chat页面和Textarea组件的字体颜色修复 */
+  .econai-chat-input {
+    color: #0f172a !important;
+    background: white !important;
+    border: 2px solid #cbd5e1 !important;
+    padding: 0.75rem !important;
+    font-size: 1rem !important;
+    border-radius: 0.5rem !important;
+  }
+
+  .econai-chat-input::placeholder {
+    color: #64748b !important;
+    opacity: 1 !important;
+  }
+
+  .econai-chat-input:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    outline: none !important;
+  }
+
+  /* 全局修复所有input和textarea的颜色问题 */
+  input[type="text"], 
+  input[type="password"], 
+  input[type="email"], 
+  textarea {
+    color: #0f172a !important;
+  }
+
+  input[type="text"]::placeholder, 
+  input[type="password"]::placeholder, 
+  input[type="email"]::placeholder, 
+  textarea::placeholder {
+    color: #64748b !important;
+    opacity: 1 !important;
+  }
 }

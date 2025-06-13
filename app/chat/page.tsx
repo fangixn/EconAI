@@ -19,7 +19,12 @@ import {
   Trash2, 
   User, 
   Bot,
-  Loader2
+  Loader2,
+  TrendingUp,
+  CheckCircle,
+  XCircle,
+  MessageSquare,
+  Shield
 } from 'lucide-react';
 import { API_CONFIGS } from '@/lib/apiConfig';
 
@@ -265,18 +270,19 @@ export default function ChatPage() {
                   <Settings className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="econai-dialog max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>API Key Configuration</DialogTitle>
                   <DialogDescription>
                     Configure API keys for each AI model
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-6 mt-6">
                   {Object.entries(API_CONFIGS).map(([key, config]) => (
-                    <div key={key} className="space-y-2">
-                      <label className="text-sm font-medium">{config.name}</label>
+                    <div key={key} className="space-y-3">
+                      <label htmlFor={`chat-api-key-${key}`}>{config.name}</label>
                       <Input
+                        id={`chat-api-key-${key}`}
                         type="password"
                         placeholder={`Enter ${config.name} API key`}
                         value={apiSettings[key] || ''}
@@ -291,7 +297,7 @@ export default function ChatPage() {
           
           {/* Model Selection */}
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-gray-700">AI Experts</h3>
+            <h3 className="text-base font-semibold text-slate-900">AI Experts</h3>
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(API_CONFIGS).map(([key, config]) => (
                 <Button
@@ -313,7 +319,7 @@ export default function ChatPage() {
         <div className="flex-1 flex flex-col">
           <div className="p-4 border-b">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-700 flex items-center">
+              <h3 className="text-base font-semibold text-slate-900 flex items-center">
                 <History className="h-4 w-4 mr-2" />
                 Chat History
               </h3>
@@ -382,10 +388,103 @@ export default function ChatPage() {
         <ScrollArea className="flex-1 bg-gray-50">
           <div className="p-4 space-y-4">
             {messages.length === 0 ? (
-              <div className="text-center py-12">
-                <Brain className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-600 mb-2">Start New Chat</h3>
-                <p className="text-gray-500">Ask your questions to AI Economics Experts</p>
+              <div className="max-w-5xl mx-auto">
+                {/* Welcome Header */}
+                <div className="text-center py-8">
+                  <Brain className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                  <h3 className="text-2xl font-bold text-slate-800 mb-2">Start New Economics Chat</h3>
+                  <p className="text-slate-600">Ask your questions to AI Economics Experts</p>
+                </div>
+
+                {/* Best Practices Section */}
+                <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 mb-6">
+                  <div className="mb-6">
+                    <div className="flex items-center mb-4">
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                        <TrendingUp className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <h2 className="text-xl font-bold text-slate-800">Best Practices for Economics Research</h2>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6 mb-8">
+                    {/* Effective Questions */}
+                    <div>
+                      <div className="flex items-center mb-3">
+                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                        <h3 className="text-lg font-semibold text-slate-800">Effective Questions to Ask</h3>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="border-l-4 border-green-500 bg-green-50 p-3 rounded-r-lg">
+                          <p className="text-slate-700 text-sm italic">
+                            "What are the key findings in the latest Fed monetary policy report?"
+                          </p>
+                        </div>
+                        <div className="border-l-4 border-green-500 bg-green-50 p-3 rounded-r-lg">
+                          <p className="text-slate-700 text-sm italic">
+                            "How does Adam Smith explain the role of specialization in The Wealth of Nations?"
+                          </p>
+                        </div>
+                        <div className="border-l-4 border-green-500 bg-green-50 p-3 rounded-r-lg">
+                          <p className="text-slate-700 text-sm italic">
+                            "What is the World Bank's 2024 global growth forecast?"
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Questions to Avoid */}
+                    <div>
+                      <div className="flex items-center mb-3">
+                        <XCircle className="h-5 w-5 text-red-600 mr-2" />
+                        <h3 className="text-lg font-semibold text-slate-800">Questions to Avoid</h3>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="border-l-4 border-red-500 bg-red-50 p-3 rounded-r-lg">
+                          <p className="text-slate-700 text-sm italic">
+                            "What does Chapter 3 of Mankiw's textbook say?" (Copyright protected)
+                          </p>
+                        </div>
+                        <div className="border-l-4 border-red-500 bg-red-50 p-3 rounded-r-lg">
+                          <p className="text-slate-700 text-sm italic">
+                            "Help me do my homework" (Focus on understanding concepts)
+                          </p>
+                        </div>
+                        <div className="border-l-4 border-red-500 bg-red-50 p-3 rounded-r-lg">
+                          <p className="text-slate-700 text-sm italic">
+                            Vague questions without specific context or documents
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Research Tips */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Research Tips</h3>
+                    <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                      <div className="text-center">
+                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                          <MessageSquare className="h-6 w-6 text-green-600" />
+                        </div>
+                        <h4 className="font-semibold text-slate-800 mb-2">Ask Specific Questions</h4>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                          Frame clear, specific questions and request comparisons between sources
+                        </p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                          <Shield className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <h4 className="font-semibold text-slate-800 mb-2">Verify Information</h4>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                          Always verify AI responses with original sources for important decisions
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
               messages.map((message) => (
@@ -457,7 +556,7 @@ export default function ChatPage() {
               onChange={(e) => setCurrentMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               rows={3}
-              className="flex-1 resize-none"
+              className="flex-1 resize-none econai-chat-input"
             />
             <Button 
               onClick={handleSendMessage}

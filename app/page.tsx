@@ -459,18 +459,19 @@ export default function Home() {
 
         {/* Settings Dialog */}
         <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="econai-dialog max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>API Key Configuration</DialogTitle>
               <DialogDescription>
                 Configure API keys for each AI model to enable full functionality
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-6 mt-6">
               {Object.entries(API_CONFIGS).map(([key, config]) => (
-                <div key={key} className="space-y-2">
-                  <label className="text-sm font-medium">{config.name}</label>
+                <div key={key} className="space-y-3">
+                  <label htmlFor={`api-key-${key}`}>{config.name}</label>
                   <Input
+                    id={`api-key-${key}`}
                     type="password"
                     placeholder={`Enter ${config.name} API key`}
                     value={apiSettings[key] || ''}
