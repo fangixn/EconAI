@@ -459,26 +459,77 @@ export default function Home() {
 
         {/* Settings Dialog */}
         <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-          <DialogContent className="econai-dialog max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="econai-dialog econai-api-dialog max-w-2xl overflow-hidden flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>API Key Configuration</DialogTitle>
               <DialogDescription>
-                Configure API keys for each AI model to enable full functionality
+                Configure API keys for each AI model. Click the links below to get API keys.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-6 mt-6">
-              {Object.entries(API_CONFIGS).map(([key, config]) => (
-                <div key={key} className="space-y-3">
-                  <label htmlFor={`api-key-${key}`}>{config.name}</label>
-                  <Input
-                    id={`api-key-${key}`}
-                    type="password"
-                    placeholder={`Enter ${config.name} API key`}
-                    value={apiSettings[key] || ''}
-                    onChange={(e) => handleApiSettingChange(key, e.target.value)}
-                  />
-                </div>
-              ))}
+            
+            {/* 滚动区域 */}
+            <div className="flex-1 api-scroll-area space-y-6 mt-6 pr-2">
+              {Object.entries(API_CONFIGS).map(([key, config]) => {
+                // 为每个模型定义API申请链接
+                const getApiLink = (modelKey: string) => {
+                  switch (modelKey) {
+                    case 'openai':
+                      return 'https://platform.openai.com/api-keys';
+                    case 'deepseek':
+                      return 'https://platform.deepseek.com/api_keys';
+                    case 'gemini':
+                      return 'https://aistudio.google.com/app/apikey';
+                    case 'claude':
+                      return 'https://console.anthropic.com/settings/keys';
+                    case 'qwen':
+                      return 'https://dashscope.console.aliyun.com/api-key';
+                    default:
+                      return '#';
+                  }
+                };
+
+                return (
+                  <div key={key} className="econai-api-model-card space-y-3 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor={`api-key-${key}`} className="font-medium text-slate-800">
+                        {config.name}
+                      </label>
+                      <a
+                        href={getApiLink(key)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="econai-api-link text-sm text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        获取API密钥 →
+                      </a>
+                    </div>
+                    <Input
+                      id={`api-key-${key}`}
+                      type="password"
+                      placeholder={`Enter ${config.name} API key`}
+                      value={apiSettings[key] || ''}
+                      onChange={(e) => handleApiSettingChange(key, e.target.value)}
+                      className="bg-white"
+                    />
+                    {apiSettings[key] && (
+                      <div className="flex items-center text-xs text-green-600">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        API密钥已配置
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 固定在底部的按钮区域 */}
+            <div className="flex-shrink-0 flex justify-end space-x-3 mt-6 pt-6 border-t econai-dialog-footer">
+              <Button variant="outline" onClick={() => setSettingsOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={() => setSettingsOpen(false)} className="econai-button-primary">
+                保存设置
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

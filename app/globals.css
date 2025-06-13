@@ -217,4 +217,140 @@
     color: #64748b !important;
     opacity: 1 !important;
   }
+
+  /* 聊天页面AI专家按钮样式 */
+  .econai-ai-expert-button {
+    min-height: 44px !important;
+    white-space: nowrap !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .econai-ai-expert-button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .econai-ai-expert-button.selected {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border-color: transparent !important;
+  }
+
+  .econai-ai-expert-button .truncate {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* 侧边栏滚动条美化 */
+  .econai-sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .econai-sidebar-scroll::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+
+  .econai-sidebar-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  .econai-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* API设置对话框专用样式 */
+  .econai-api-dialog {
+    max-height: 80vh !important;
+  }
+
+  .econai-api-dialog .api-scroll-area {
+    max-height: calc(80vh - 180px) !important;
+    overflow-y: auto !important;
+  }
+
+  .econai-api-dialog .api-scroll-area::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .econai-api-dialog .api-scroll-area::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 3px;
+  }
+
+  .econai-api-dialog .api-scroll-area::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  .econai-api-dialog .api-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* API申请链接样式 */
+  .econai-api-link {
+    position: relative;
+    transition: all 0.2s ease;
+  }
+
+  .econai-api-link:hover {
+    transform: translateY(-1px);
+  }
+
+  .econai-api-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transition: width 0.3s ease;
+  }
+
+  .econai-api-link:hover::after {
+    width: 100%;
+  }
+
+  /* API模型卡片样式 */
+  .econai-api-model-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+  }
+
+  .econai-api-model-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  /* 固定按钮区域样式 */
+  .econai-dialog-footer {
+    background: linear-gradient(to top, #ffffff 0%, rgba(255, 255, 255, 0.95) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* 聊天页面紧凑卡片样式 */
+  .border-l-3 {
+    border-left-width: 3px !important;
+  }
+
+  .econai-compact-card {
+    transition: all 0.2s ease;
+  }
+
+  .econai-compact-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  /* 聊天欢迎区域样式 */
+  .econai-chat-welcome {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
 }

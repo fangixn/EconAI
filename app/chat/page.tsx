@@ -58,6 +58,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [apiSettings, setApiSettings] = useState<ApiSettings>({});
+  const [tempApiSettings, setTempApiSettings] = useState<ApiSettings>({});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
@@ -82,7 +83,9 @@ export default function ChatPage() {
     // Load API settings from localStorage
     const savedSettings = localStorage.getItem('apiSettings');
     if (savedSettings) {
-      setApiSettings(JSON.parse(savedSettings));
+      const settings = JSON.parse(savedSettings);
+      setApiSettings(settings);
+      setTempApiSettings(settings);
     }
 
     // Load chat history from localStorage
@@ -130,7 +133,7 @@ export default function ChatPage() {
     const apiKey = apiSettings[selectedModel];
     if (!apiKey) {
       alert('Please configure API key first');
-      setSettingsOpen(true);
+      handleOpenSettings();
       return;
     }
 
@@ -245,70 +248,146 @@ export default function ChatPage() {
   };
 
   const handleApiSettingChange = (modelKey: string, value: string) => {
-    const newSettings = {
-      ...apiSettings,
+    // 只更新临时设置，不立即保存
+    setTempApiSettings(prev => ({
+      ...prev,
       [modelKey]: value
-    };
-    setApiSettings(newSettings);
-    localStorage.setItem('apiSettings', JSON.stringify(newSettings));
+    }));
+  };
+
+  const handleSaveSettings = () => {
+    // 保存设置并关闭对话框
+    setApiSettings(tempApiSettings);
+    localStorage.setItem('apiSettings', JSON.stringify(tempApiSettings));
+    setSettingsOpen(false);
+  };
+
+  const handleCancelSettings = () => {
+    // 恢复到原始设置，撤销未保存的更改
+    setTempApiSettings(apiSettings);
+    setSettingsOpen(false);
+  };
+
+  const handleOpenSettings = () => {
+    // 打开设置时，将当前设置复制到临时设置
+    setTempApiSettings(apiSettings);
+    setSettingsOpen(true);
   };
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Left Sidebar */}
-      <div className="w-80 bg-white border-r flex flex-col">
+      {/* Left Sidebar - 增加宽度以确保完整显示，并添加响应式设计 */}
+      <div className="w-96 lg:w-96 md:w-80 sm:w-72 bg-white border-r flex flex-col">
         {/* Header */}
         <div className="p-4 border-b">
           <div className="flex items-center justify-between mb-4">
             <Button variant="ghost" size="sm" onClick={() => router.push('/')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
+              <span className="hidden sm:inline">Back to Home</span>
+              <span className="sm:hidden">Back</span>
             </Button>
             <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={handleOpenSettings}>
                   <Settings className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="econai-dialog max-w-2xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
+              <DialogContent className="econai-dialog econai-api-dialog max-w-2xl overflow-hidden flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                   <DialogTitle>API Key Configuration</DialogTitle>
                   <DialogDescription>
-                    Configure API keys for each AI model
+                    Configure API keys for each AI model. Click the links below to get API keys.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-6 mt-6">
-                  {Object.entries(API_CONFIGS).map(([key, config]) => (
-                    <div key={key} className="space-y-3">
-                      <label htmlFor={`chat-api-key-${key}`}>{config.name}</label>
-                      <Input
-                        id={`chat-api-key-${key}`}
-                        type="password"
-                        placeholder={`Enter ${config.name} API key`}
-                        value={apiSettings[key] || ''}
-                        onChange={(e) => handleApiSettingChange(key, e.target.value)}
-                      />
-                    </div>
-                  ))}
+                
+                {/* 滚动区域 */}
+                <div className="flex-1 api-scroll-area space-y-6 mt-6 pr-2">
+                  {Object.entries(API_CONFIGS).map(([key, config]) => {
+                    // 为每个模型定义API申请链接
+                    const getApiLink = (modelKey: string) => {
+                      switch (modelKey) {
+                        case 'openai':
+                          return 'https://platform.openai.com/api-keys';
+                        case 'deepseek':
+                          return 'https://platform.deepseek.com/api_keys';
+                        case 'gemini':
+                          return 'https://aistudio.google.com/app/apikey';
+                        case 'claude':
+                          return 'https://console.anthropic.com/settings/keys';
+                        case 'qwen':
+                          return 'https://dashscope.console.aliyun.com/api-key';
+                        default:
+                          return '#';
+                      }
+                    };
+
+                    return (
+                      <div key={key} className="econai-api-model-card space-y-3 p-4 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <label htmlFor={`chat-api-key-${key}`} className="font-medium text-slate-800">
+                            {config.name}
+                          </label>
+                          <a
+                            href={getApiLink(key)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="econai-api-link text-sm text-blue-600 hover:text-blue-800 font-medium"
+                          >
+                            获取API密钥 →
+                          </a>
+                        </div>
+                        <Input
+                          id={`chat-api-key-${key}`}
+                          type="password"
+                          placeholder={`Enter ${config.name} API key`}
+                          value={tempApiSettings[key] || ''}
+                          onChange={(e) => handleApiSettingChange(key, e.target.value)}
+                          className="bg-white"
+                        />
+                        {tempApiSettings[key] && (
+                          <div className="flex items-center text-xs text-green-600">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            API密钥已配置
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 固定在底部的按钮区域 */}
+                <div className="flex-shrink-0 flex justify-end space-x-3 mt-6 pt-6 border-t econai-dialog-footer">
+                  <Button variant="outline" onClick={handleCancelSettings}>
+                    取消
+                  </Button>
+                  <Button onClick={handleSaveSettings} className="econai-button-primary">
+                    保存设置
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
           
-          {/* Model Selection */}
-          <div className="space-y-2">
-            <h3 className="text-base font-semibold text-slate-900">AI Experts</h3>
-            <div className="grid grid-cols-2 gap-2">
+          {/* Model Selection - 改为单列布局以确保完整显示 */}
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-slate-900">EconAI</h3>
+            <div className="space-y-2">
               {Object.entries(API_CONFIGS).map(([key, config]) => (
                 <Button
                   key={key}
                   variant={selectedModel === key ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedModel(key)}
-                  className="text-xs"
+                  className={`w-full justify-between text-sm h-auto py-3 min-h-[44px] econai-ai-expert-button ${
+                    selectedModel === key ? 'selected' : ''
+                  }`}
                 >
-                  {config.name}
-                  {apiSettings[key] && <Badge variant="secondary" className="ml-1 text-[10px] px-1">✓</Badge>}
+                  <span className="font-medium text-left truncate pr-2 flex-1">{config.name}</span>
+                  {apiSettings[key] && (
+                    <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 flex-shrink-0">
+                      ✓
+                    </Badge>
+                  )}
                 </Button>
               ))}
             </div>
@@ -321,7 +400,7 @@ export default function ChatPage() {
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-slate-900 flex items-center">
                 <History className="h-4 w-4 mr-2" />
-                Chat History
+                History Chat
               </h3>
               <Button variant="ghost" size="sm" onClick={createNewSession}>
                 <Brain className="h-4 w-4" />
@@ -329,7 +408,7 @@ export default function ChatPage() {
             </div>
           </div>
           
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 econai-sidebar-scroll">
             <div className="p-2 space-y-2">
               {chatSessions.map((session) => (
                 <div
@@ -377,9 +456,9 @@ export default function ChatPage() {
             <Brain className="h-6 w-6 text-blue-600" />
             <div>
               <h1 className="text-lg font-semibold text-gray-900">
-                {API_CONFIGS[selectedModel].name}
+                EconAI
               </h1>
-              <p className="text-sm text-gray-600">Economics Expert Chat</p>
+              <p className="text-sm text-gray-600">Professional Economics Research Platform</p>
             </div>
           </div>
         </div>
@@ -388,46 +467,46 @@ export default function ChatPage() {
         <ScrollArea className="flex-1 bg-gray-50">
           <div className="p-4 space-y-4">
             {messages.length === 0 ? (
-              <div className="max-w-5xl mx-auto">
+              <div className="max-w-4xl mx-auto">
                 {/* Welcome Header */}
-                <div className="text-center py-8">
-                  <Brain className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold text-slate-800 mb-2">Start New Economics Chat</h3>
-                  <p className="text-slate-600">Ask your questions to AI Economics Experts</p>
+                <div className="text-center py-6">
+                  <Brain className="h-10 w-10 text-blue-600 mx-auto mb-3" />
+                  <h3 className="text-xl font-bold text-slate-800 mb-2">EconAI Research Chat</h3>
+                  <p className="text-slate-600">Start your economics analysis journey</p>
                 </div>
 
                 {/* Best Practices Section */}
-                <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 mb-6">
-                  <div className="mb-6">
-                    <div className="flex items-center mb-4">
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                        <TrendingUp className="h-5 w-5 text-purple-600" />
+                <div className="econai-compact-card econai-chat-welcome rounded-xl p-6 shadow-sm border border-slate-100 mb-4">
+                  <div className="mb-4">
+                    <div className="flex items-center justify-center mb-4">
+                      <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center mr-2">
+                        <TrendingUp className="h-4 w-4 text-purple-600" />
                       </div>
-                      <h2 className="text-xl font-bold text-slate-800">Best Practices for Economics Research</h2>
+                      <h2 className="text-lg font-bold text-slate-800">Research Guidelines</h2>
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-6 mb-8">
+                  <div className="grid md:grid-cols-2 gap-4 mb-6">
                     {/* Effective Questions */}
                     <div>
-                      <div className="flex items-center mb-3">
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                        <h3 className="text-lg font-semibold text-slate-800">Effective Questions to Ask</h3>
+                      <div className="flex items-center mb-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
+                        <h3 className="text-sm font-semibold text-slate-800">Good Questions</h3>
                       </div>
-                      <div className="space-y-3">
-                        <div className="border-l-4 border-green-500 bg-green-50 p-3 rounded-r-lg">
-                          <p className="text-slate-700 text-sm italic">
-                            "What are the key findings in the latest Fed monetary policy report?"
+                      <div className="space-y-2">
+                        <div className="border-l-3 border-green-500 bg-green-50 p-2 rounded-r-lg">
+                          <p className="text-slate-700 text-xs italic">
+                            "Latest Fed monetary policy insights?"
                           </p>
                         </div>
-                        <div className="border-l-4 border-green-500 bg-green-50 p-3 rounded-r-lg">
-                          <p className="text-slate-700 text-sm italic">
-                            "How does Adam Smith explain the role of specialization in The Wealth of Nations?"
+                        <div className="border-l-3 border-green-500 bg-green-50 p-2 rounded-r-lg">
+                          <p className="text-slate-700 text-xs italic">
+                            "Adam Smith on specialization theory?"
                           </p>
                         </div>
-                        <div className="border-l-4 border-green-500 bg-green-50 p-3 rounded-r-lg">
-                          <p className="text-slate-700 text-sm italic">
-                            "What is the World Bank's 2024 global growth forecast?"
+                        <div className="border-l-3 border-green-500 bg-green-50 p-2 rounded-r-lg">
+                          <p className="text-slate-700 text-xs italic">
+                            "World Bank 2024 growth forecast?"
                           </p>
                         </div>
                       </div>
@@ -435,24 +514,24 @@ export default function ChatPage() {
 
                     {/* Questions to Avoid */}
                     <div>
-                      <div className="flex items-center mb-3">
-                        <XCircle className="h-5 w-5 text-red-600 mr-2" />
-                        <h3 className="text-lg font-semibold text-slate-800">Questions to Avoid</h3>
+                      <div className="flex items-center mb-2">
+                        <XCircle className="h-4 w-4 text-red-600 mr-1" />
+                        <h3 className="text-sm font-semibold text-slate-800">Avoid These</h3>
                       </div>
-                      <div className="space-y-3">
-                        <div className="border-l-4 border-red-500 bg-red-50 p-3 rounded-r-lg">
-                          <p className="text-slate-700 text-sm italic">
-                            "What does Chapter 3 of Mankiw's textbook say?" (Copyright protected)
+                      <div className="space-y-2">
+                        <div className="border-l-3 border-red-500 bg-red-50 p-2 rounded-r-lg">
+                          <p className="text-slate-700 text-xs italic">
+                            Copyright protected content
                           </p>
                         </div>
-                        <div className="border-l-4 border-red-500 bg-red-50 p-3 rounded-r-lg">
-                          <p className="text-slate-700 text-sm italic">
-                            "Help me do my homework" (Focus on understanding concepts)
+                        <div className="border-l-3 border-red-500 bg-red-50 p-2 rounded-r-lg">
+                          <p className="text-slate-700 text-xs italic">
+                            Homework completion requests
                           </p>
                         </div>
-                        <div className="border-l-4 border-red-500 bg-red-50 p-3 rounded-r-lg">
-                          <p className="text-slate-700 text-sm italic">
-                            Vague questions without specific context or documents
+                        <div className="border-l-3 border-red-500 bg-red-50 p-2 rounded-r-lg">
+                          <p className="text-slate-700 text-xs italic">
+                            Vague questions without context
                           </p>
                         </div>
                       </div>
@@ -461,25 +540,25 @@ export default function ChatPage() {
 
                   {/* Research Tips */}
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Research Tips</h3>
-                    <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                    <h3 className="text-sm font-semibold text-slate-800 mb-3 text-center">Quick Tips</h3>
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="text-center">
-                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                          <MessageSquare className="h-6 w-6 text-green-600" />
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                          <MessageSquare className="h-4 w-4 text-green-600" />
                         </div>
-                        <h4 className="font-semibold text-slate-800 mb-2">Ask Specific Questions</h4>
-                        <p className="text-sm text-slate-600 leading-relaxed">
-                          Frame clear, specific questions and request comparisons between sources
+                        <h4 className="text-xs font-semibold text-slate-800 mb-1">Be Specific</h4>
+                        <p className="text-xs text-slate-600">
+                          Clear, focused questions work best
                         </p>
                       </div>
                       
                       <div className="text-center">
-                        <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                          <Shield className="h-6 w-6 text-purple-600" />
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                          <Shield className="h-4 w-4 text-purple-600" />
                         </div>
-                        <h4 className="font-semibold text-slate-800 mb-2">Verify Information</h4>
-                        <p className="text-sm text-slate-600 leading-relaxed">
-                          Always verify AI responses with original sources for important decisions
+                        <h4 className="text-xs font-semibold text-slate-800 mb-1">Verify Sources</h4>
+                        <p className="text-xs text-slate-600">
+                          Check responses with original data
                         </p>
                       </div>
                     </div>
