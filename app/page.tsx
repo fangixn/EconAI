@@ -1082,6 +1082,9 @@ Suggested Solutions:
     }
   ];
 
+  // Add diagnostic function for debugging upload issues
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
@@ -1543,14 +1546,17 @@ Suggested Solutions:
                     className="min-h-[120px] resize-none"
                   />
                   <div className="flex justify-between items-center">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsUploading(!isUploading)}
-                      className="flex items-center space-x-2"
-                    >
-                      <Upload className="h-4 w-4" />
-                      <span>Upload Document</span>
-                    </Button>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsUploading(!isUploading)}
+                        className="flex items-center space-x-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        <span>Upload Document</span>
+                      </Button>
+                      
+                    </div>
                     <Button 
                       className="bg-blue-600 hover:bg-blue-700"
                       disabled={!message.trim() || isLoading}
