@@ -298,7 +298,7 @@ export default function Home() {
     setDocumentChunks(allChunks);
     setIsVectorizing(false);
     
-    console.log(`📚 向量化完成: 处理了 ${allChunks.length} 个文档块`);
+    console.log(`📚 Vectorization complete: Processed ${allChunks.length} document chunks`);
   };
 
   // Real AI API call function with RAG support
@@ -315,36 +315,36 @@ export default function Home() {
       
       if (searchResult.chunks.length > 0) {
         const retrievedContent = searchResult.chunks.map((chunk, index) => 
-          `[相关文档片段 ${index + 1}] (来源: ${chunk.metadata.fileName}, 块 ${chunk.metadata.chunkIndex + 1}/${chunk.metadata.totalChunks}, 相关度: ${(chunk.relevanceScore! * 100).toFixed(1)}%)\n${chunk.content}`
+          `[Document Chunk ${index + 1}] (Source: ${chunk.metadata.fileName}, Chunk ${chunk.metadata.chunkIndex + 1}/${chunk.metadata.totalChunks}, Relevance: ${(chunk.relevanceScore! * 100).toFixed(1)}%)\n${chunk.content}`
         ).join('\n\n');
         
         ragContext = {
           retrievedChunks: searchResult.chunks,
           originalQuery: message,
-          contextSummary: `基于向量检索找到 ${searchResult.chunks.length} 个相关文档片段`
+          contextSummary: `Found ${searchResult.chunks.length} relevant document chunks through vector search`
         };
         
-        contextPrompt = `作为经济学专家，请基于以下通过向量检索技术找到的相关文档内容回答问题：
+        contextPrompt = `As an economics expert, please answer the question based on the following relevant document content retrieved through vector search technology:
 
-检索到的相关内容：
+Retrieved Relevant Content:
 ${retrievedContent}
 
-用户问题：${message}
+User Question: ${message}
 
-请基于上述文档片段进行深入的经济学分析。请：
-1. 重点分析与问题最相关的文档内容
-2. 引用具体的数据、理论或案例
-3. 如果多个文档片段提供了不同角度，请综合分析
-4. 如果检索内容不足以完全回答问题，请说明并提供相关的经济学理论补充
+Please provide an in-depth economic analysis based on the above document excerpts. Please:
+1. Focus on analyzing the document content most relevant to the question
+2. Quote specific data, theories, or case studies
+3. If multiple document chunks provide different perspectives, please provide a comprehensive analysis
+4. If the retrieved content is insufficient to fully answer the question, please indicate this and supplement with relevant economic theory
 
-注意：以上内容来自用户上传的文档，通过向量相似度检索获得。`;
+Note: The above content is from user-uploaded documents, obtained through vector similarity search.`;
 
-        console.log(`🔍 RAG检索: 找到 ${searchResult.chunks.length} 个相关片段, 平均相关度: ${(searchResult.chunks.reduce((sum, chunk) => sum + (chunk.relevanceScore || 0), 0) / searchResult.chunks.length * 100).toFixed(1)}%`);
+                  console.log(`🔍 RAG Search: Found ${searchResult.chunks.length} relevant chunks, average relevance: ${(searchResult.chunks.reduce((sum, chunk) => sum + (chunk.relevanceScore || 0), 0) / searchResult.chunks.length * 100).toFixed(1)}%`);
       } else {
-        console.log('🔍 RAG检索: 未找到相关内容，使用一般知识回答');
-        contextPrompt = `作为经济学专家，用户问题："${message}"。
+        console.log('🔍 RAG search: No relevant content found, using general knowledge');
+        contextPrompt = `As an economics expert, user question: "${message}".
 
-注意：已检索用户上传的文档，但未找到直接相关的内容。请基于一般经济学知识回答，并建议用户可能需要提供更相关的文档或更具体的问题。`;
+Note: The user's uploaded documents have been searched, but no directly relevant content was found. Please answer based on general economic knowledge and suggest that the user may need to provide more relevant documents or more specific questions.`;
       }
     } else {
       // Fallback to simple file content if no vector search
@@ -482,16 +482,16 @@ The uploaded files contain valuable economic information that would be analyzed 
     } else if (failedFiles.length > 0) {
       return `${randomResponse}
 
-我注意到您上传了 ${failedFiles.length} 个文档 (${failedFiles.map(f => f.name).join(', ')})，但是文档内容提取失败了。
+I notice you uploaded ${failedFiles.length} document(s) (${failedFiles.map(f => f.name).join(', ')}), but content extraction failed.
 
-关于您的问题"${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}"，我将基于一般经济学知识来回答，但为了获得更准确的文档分析，建议您：
+Regarding your question "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}", I will answer based on general economics knowledge, but for more accurate document analysis, I suggest you:
 
-1. **转换文档格式**：将DOC文档另存为TXT格式
-2. **复制粘贴内容**：直接将文档中的文字复制到聊天框中
-3. **检查文档**：确保文档没有损坏或密码保护
-4. **配置API密钥**：在设置中配置真实的API密钥以获得更好的文档处理能力
+1. **Convert Document Format**: Save DOC documents as TXT format
+2. **Copy and Paste Content**: Directly copy the text from the document to the chat box
+3. **Check Document**: Ensure the document is not corrupted or password protected
+4. **Configure API Keys**: Set up real API keys in settings for better document processing capabilities
 
-[演示模式] 如果配置了API密钥，系统将提供更强大的文档分析功能。`;
+[Demo Mode] If API keys are configured, the system will provide more powerful document analysis features.`;
     }
     
     return `${randomResponse} Your question about "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}" is an excellent inquiry. In economics, this involves supply and demand relationships, market efficiency, consumer behavior, and many other aspects. Let me explain in detail...`;
@@ -706,12 +706,12 @@ The uploaded files contain valuable economic information that would be analyzed 
       
       if (fullExtractedContent.length > 20) {
         return {
-          content: `[EPUB电子书: ${file.name}]\n\n${fullExtractedContent}`,
+          content: `[EPUB E-book: ${file.name}]\n\n${fullExtractedContent}`,
           integrity
         };
       } else {
         return {
-          content: `[EPUB电子书: ${file.name}]\n错误：读取EPUB文件时出错。请转换为TXT格式或手动复制内容。`,
+          content: `[EPUB E-book: ${file.name}]\nError: Failed to read EPUB file. Please convert to TXT format or manually copy content.`,
           integrity: { ...integrity, hasLossWarning: true }
         };
       }
@@ -725,7 +725,7 @@ The uploaded files contain valuable economic information that would be analyzed 
         extractionMethod: 'EPUB_ERROR'
       };
       return {
-        content: `[EPUB电子书: ${file.name}]\n错误：读取EPUB文件时出错。请转换为TXT格式或手动复制内容。`,
+        content: `[EPUB E-book: ${file.name}]\nError: Failed to read EPUB file. Please convert to TXT format or manually copy content.`,
         integrity: errorIntegrity
       };
     }
@@ -794,27 +794,31 @@ The uploaded files contain valuable economic information that would be analyzed 
       
       const integrity = preserveContentIntegrity(originalContent, extractedText, 'DOC_BINARY_EXTRACTION');
       
+      console.log(`📄 DOC file processing result - ${file.name}: extracted ${extractedText.length} characters`);
+      
       if (extractedText.length > 10) {
+        console.log(`✅ DOC file content extraction successful: ${file.name}`);
         return {
-          content: `[WORD DOCUMENT: ${file.name}]\n\n完整内容提取：\n\n${extractedText}`,
+          content: `[WORD DOCUMENT: ${file.name}]\n\nComplete Content Extraction:\n\n${extractedText}`,
           integrity
         };
       } else {
-        const fallbackInfo = `[WORD DOCUMENT: ${file.name}]\n
-文档信息：
-- 文件大小: ${(file.size / 1024).toFixed(1)} KB
-- 文档类型: ${file.type || '未知'}
-- 提取方法: 二进制解析
+        const fallbackInfo = `[WORD DOCUMENT: ${file.name}]
 
-提取状态：未发现足够的可读文本内容
+Document Information:
+- File Size: ${(file.size / 1024).toFixed(1)} KB
+- Document Type: ${file.type || 'Unknown'}
+- Extraction Method: Binary parsing
 
-建议解决方案：
-1. 将文档另存为.txt格式（推荐）
-2. 复制文档内容手动粘贴到聊天框
-3. 检查文档是否有密码保护
-4. 尝试使用更新版本的Word打开后重新保存
+Extraction Status: Insufficient readable text content found
 
-[完整性信息] 原始大小: ${file.size} 字节, 提取长度: ${extractedText.length} 字符`;
+Suggested Solutions:
+1. Save document as .txt format (recommended)
+2. Copy document content and paste manually into chat
+3. Check if document is password protected
+4. Try opening with newer Word version and re-saving
+
+[Integrity Info] Original Size: ${file.size} bytes, Extracted Length: ${extractedText.length} characters`;
         
         return {
           content: fallbackInfo,
@@ -831,7 +835,7 @@ The uploaded files contain valuable economic information that would be analyzed 
         extractionMethod: 'DOC_ERROR'
       };
       return {
-        content: `[WORD DOCUMENT: ${file.name}]\n错误：无法读取DOC文档内容。请将文档转换为TXT格式或复制内容后手动输入。`,
+        content: `[WORD DOCUMENT: ${file.name}]\nError: Unable to read DOC document content. Please convert document to TXT format or copy content manually.`,
         integrity: errorIntegrity
       };
     }
@@ -859,17 +863,30 @@ The uploaded files contain valuable economic information that would be analyzed 
           const result = event.target?.result as string;
           const originalSize = file.size;
           
+          console.log(`🔍 File reading result - ${file.name}:`, {
+            encoding: encoding,
+            originalSize: originalSize,
+            resultLength: result?.length || 0,
+            fileType: file.type,
+            fileExtension: fileName.split('.').pop(),
+            first100Chars: result?.substring(0, 100)
+          });
+          
           if (file.type === 'text/plain' || fileName.endsWith('.txt')) {
             if (result && result.length > 0) {
-              if (!result.includes('') || encoding !== 'utf-8') {
-                const content = result.length > 1 ? result : `[空文件: ${file.name}]\n文件内容为空或无法读取`;
+              // Check for replacement character (indicates encoding issues)
+              const hasEncodingIssues = result.includes('\uFFFD') && encoding === 'utf-8';
+              if (!hasEncodingIssues) {
+                const content = result.length > 1 ? result : `[Empty file: ${file.name}]\nFile content is empty or unreadable`;
                 const integrity = preserveContentIntegrity(result, content, `TEXT_${encoding.toUpperCase()}`);
+                console.log(`✅ Successfully read TXT file: ${file.name}, encoding: ${encoding}, length: ${result.length}`);
                 resolve({ content, integrity });
               } else {
+                console.log(`🔄 Encoding issues detected, trying GBK encoding: ${file.name}`);
                 tryReadWithEncoding('gbk');
               }
             } else {
-              const content = `[空文件: ${file.name}]\n文件内容为空或无法读取`;
+              const content = `[Empty file: ${file.name}]\nFile content is empty or unreadable`;
               const integrity: ContentIntegrityInfo = {
                 originalSize,
                 extractedSize: content.length,
@@ -881,16 +898,20 @@ The uploaded files contain valuable economic information that would be analyzed 
             }
           } else if (fileName.endsWith('.md') || fileName.endsWith('.markdown') || file.type === 'text/markdown' || file.type === 'text/x-markdown') {
             if (result && result.length > 0) {
-              if (!result.includes('') || encoding !== 'utf-8') {
-                const contentBody = result.length > 1 ? result : '文件内容为空';
-                const content = `[MARKDOWN文件: ${file.name}]\n\n${contentBody}`;
+              // Check for replacement character (indicates encoding issues)
+              const hasEncodingIssues = result.includes('\uFFFD') && encoding === 'utf-8';
+              if (!hasEncodingIssues) {
+                const contentBody = result.length > 1 ? result : 'File content is empty';
+                const content = `[MARKDOWN FILE: ${file.name}]\n\n${contentBody}`;
                 const integrity = preserveContentIntegrity(result, content, `MARKDOWN_${encoding.toUpperCase()}`);
+                console.log(`✅ Successfully read Markdown file: ${file.name}, encoding: ${encoding}, length: ${result.length}`);
                 resolve({ content, integrity });
               } else {
+                console.log(`🔄 Markdown file encoding issues detected, trying GBK encoding: ${file.name}`);
                 tryReadWithEncoding('gbk');
               }
             } else {
-              const content = `[MARKDOWN文件: ${file.name}]\n\n文件内容为空或无法读取`;
+              const content = `[MARKDOWN FILE: ${file.name}]\n\nFile content is empty or unreadable`;
               const integrity: ContentIntegrityInfo = {
                 originalSize,
                 extractedSize: content.length,
@@ -903,12 +924,12 @@ The uploaded files contain valuable economic information that would be analyzed 
           } else {
             // Other formats
             if (result && result.length > 0) {
-              const contentBody = result.length > 1 ? result : '文件内容为空';
-              const content = `[文件格式: ${file.name}]\n尝试以文本格式读取:\n\n${contentBody}`;
+              const contentBody = result.length > 1 ? result : 'File content is empty';
+              const content = `[FILE FORMAT: ${file.name}]\nAttempting to read as text format:\n\n${contentBody}`;
               const integrity = preserveContentIntegrity(result, content, `GENERIC_${encoding.toUpperCase()}`);
               resolve({ content, integrity });
             } else {
-              const content = `[不支持的格式: ${file.name}]\n无法读取此文件格式。建议转换为TXT、MD或其他支持的格式。`;
+              const content = `[UNSUPPORTED FORMAT: ${file.name}]\nUnable to read this file format. Please convert to TXT, MD or other supported formats.`;
               const integrity: ContentIntegrityInfo = {
                 originalSize,
                 extractedSize: content.length,
@@ -949,18 +970,33 @@ The uploaded files contain valuable economic information that would be analyzed 
       // Enhanced content validation with integrity consideration
       const isExtractionSuccessful = content && 
         content.length > 10 &&
-        !content.includes('内容提取失败') && 
         !content.includes('Content extraction failed') &&
-        !content.includes('无法读取此文件格式') &&
-        !content.includes('文件内容为空或无法读取');
+        !content.includes('Unable to read this file format') &&
+        !content.includes('File content is empty or unreadable') &&
+        !content.includes('[Empty file:') &&
+        !content.includes('[UNSUPPORTED FORMAT:') &&
+        !content.includes('[File processing error:') &&
+        !content.includes('Suggested Solutions:') &&
+        integrity.extractionMethod !== 'PROCESSING_ERROR' &&
+        integrity.extractionMethod !== 'EMPTY_FILE' &&
+        integrity.extractionMethod !== 'UNSUPPORTED_FORMAT';
+      
+      console.log(`📋 Content validation result - ${file.name}:`, {
+        contentLength: content?.length || 0,
+        extractionSuccessful: isExtractionSuccessful,
+        integrityMethod: integrity.extractionMethod,
+        hasLossWarning: integrity.hasLossWarning,
+        contentPreview: content?.substring(0, 200),
+        status: isExtractionSuccessful ? '✅ Success' : '❌ Failed'
+      });
       
       // Log integrity information
-      console.log(`文件完整性信息 - ${file.name}:`, {
-        原始大小: integrity.originalSize,
-        提取大小: integrity.extractedSize,
-        保留比例: (integrity.compressionRatio * 100).toFixed(1) + '%',
-        提取方法: integrity.extractionMethod,
-        有损失警告: integrity.hasLossWarning
+      console.log(`File integrity information - ${file.name}:`, {
+        originalSize: integrity.originalSize,
+        extractedSize: integrity.extractedSize,
+        retentionRatio: (integrity.compressionRatio * 100).toFixed(1) + '%',
+        extractionMethod: integrity.extractionMethod,
+        hasLossWarning: integrity.hasLossWarning
       });
       
       setUploadedFiles(prev => 
@@ -978,7 +1014,7 @@ The uploaded files contain valuable economic information that would be analyzed 
 
       // Warn user if content integrity is compromised
       if (integrity.hasLossWarning) {
-        console.warn(`⚠️ 内容完整性警告 - ${file.name}: 可能存在内容损失（保留比例: ${(integrity.compressionRatio * 100).toFixed(1)}%）`);
+        console.warn(`⚠️ Content integrity warning - ${file.name}: possible content loss (retention ratio: ${(integrity.compressionRatio * 100).toFixed(1)}%)`);
       }
 
       // Auto-vectorize after successful file processing
@@ -990,7 +1026,7 @@ The uploaded files contain valuable economic information that would be analyzed 
     } catch (error) {
       console.error('Failed to read file content:', error);
       
-      const errorMessage = `[文件处理错误: ${file.name}]\n错误：${error instanceof Error ? error.message : '未知错误'}\n\n内容完整性状态：处理失败\n\n建议：\n1. 确保文件未损坏\n2. 尝试将文档另存为.txt格式\n3. 或者复制文档内容手动粘贴`;
+      const errorMessage = `[File processing error: ${file.name}]\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nContent integrity status: Processing failed\n\nSuggestions:\n1. Ensure file is not corrupted\n2. Try saving document as .txt format\n3. Or copy document content and paste manually`;
       
       const errorIntegrity: ContentIntegrityInfo = {
         originalSize: file.file?.size || 0,
@@ -1576,7 +1612,7 @@ The uploaded files contain valuable economic information that would be analyzed 
                           {isDragOver ? 'Release to upload files' : 'Drop your economics documents here'}
                         </p>
                         <p className="text-sm text-gray-500 mb-4">
-                          完全支持：TXT、MD（含中文编码检测）• 增强支持：DOC、DOCX、RTF、PDF（智能文本提取）• 基础支持：EPUB、MOBI（建议转换为TXT/MD获得更好效果）
+                          Full Support: TXT, MD (with encoding detection) • Enhanced Support: DOC, DOCX, RTF, PDF (intelligent text extraction) • Basic Support: EPUB, MOBI (recommend converting to TXT/MD for best results)
                         </p>
                         <Button variant="outline" onClick={handleFileSelect}>
                           Browse Files
@@ -1651,16 +1687,16 @@ The uploaded files contain valuable economic information that would be analyzed 
                                           file.integrityInfo.hasLossWarning 
                                             ? 'bg-yellow-100 text-yellow-800' 
                                             : 'bg-green-100 text-green-800'
-                                        }`}>
-                                          {(file.integrityInfo.compressionRatio * 100).toFixed(0)}% 完整性
-                                        </span>
+                                                                                }`}>
+                                        {(file.integrityInfo.compressionRatio * 100).toFixed(0)}% Integrity
+                                      </span>
                                       )}
                                     </div>
                                   </div>
                                   {file.integrityInfo && (
                                     <div className="text-xs text-gray-500 mb-2 flex justify-between">
-                                      <span>提取方法: {file.integrityInfo.extractionMethod}</span>
-                                      <span>原始: {file.integrityInfo.originalSize} → 提取: {file.integrityInfo.extractedSize}</span>
+                                      <span>Extraction Method: {file.integrityInfo.extractionMethod}</span>
+                                      <span>Original: {file.integrityInfo.originalSize} → Extracted: {file.integrityInfo.extractedSize}</span>
                                     </div>
                                   )}
                                   <div className="text-gray-600 max-h-20 overflow-y-auto">
