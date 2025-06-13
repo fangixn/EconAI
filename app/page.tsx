@@ -558,7 +558,9 @@ Regarding your question "${userMessage.substring(0, 50)}${userMessage.length > 5
 
   // Handle file upload with progress
   const handleFileUpload = (files: FileList) => {
+    console.log('🚀 handleFileUpload triggered with files:', files.length);
     Array.from(files).forEach(file => {
+      console.log('📁 Processing file:', file.name, 'size:', file.size, 'type:', file.type);
       const uploadedFile: UploadedFile = {
         id: Date.now().toString() + Math.random().toString(),
         name: file.name,
@@ -572,6 +574,7 @@ Regarding your question "${userMessage.substring(0, 50)}${userMessage.length > 5
       setUploadedFiles(prev => [...prev, uploadedFile]);
       
       // Simulate upload progress
+      console.log('⏳ Starting upload simulation for:', uploadedFile.name);
       simulateUploadProgress(uploadedFile.id);
     });
   };
@@ -897,10 +900,25 @@ Suggested Solutions:
               resolve({ content, integrity });
             }
           } else if (fileName.endsWith('.md') || fileName.endsWith('.markdown') || file.type === 'text/markdown' || file.type === 'text/x-markdown') {
+            console.log(`🔍 Processing Markdown file: ${file.name}, size: ${originalSize} bytes, encoding: ${encoding}`);
+            
             if (result && result.length > 0) {
-              // Check for replacement character (indicates encoding issues)
+              // Enhanced encoding detection for Chinese content
               const hasEncodingIssues = result.includes('\uFFFD') && encoding === 'utf-8';
-              if (!hasEncodingIssues) {
+              const chineseCharCount = (result.match(/[\u4e00-\u9fff]/g) || []).length;
+              const totalCharCount = result.length;
+              const chineseRatio = chineseCharCount / totalCharCount;
+              
+              console.log(`📊 Markdown file analysis - ${file.name}:`, {
+                totalChars: totalCharCount,
+                chineseChars: chineseCharCount, 
+                chineseRatio: (chineseRatio * 100).toFixed(1) + '%',
+                hasReplacementChars: hasEncodingIssues,
+                encoding: encoding,
+                first200Chars: result.substring(0, 200)
+              });
+              
+              if (!hasEncodingIssues || chineseRatio > 0.1) {
                 const contentBody = result.length > 1 ? result : 'File content is empty';
                 const content = `[MARKDOWN FILE: ${file.name}]\n\n${contentBody}`;
                 const integrity = preserveContentIntegrity(result, content, `MARKDOWN_${encoding.toUpperCase()}`);
@@ -908,7 +926,19 @@ Suggested Solutions:
                 resolve({ content, integrity });
               } else {
                 console.log(`🔄 Markdown file encoding issues detected, trying GBK encoding: ${file.name}`);
-                tryReadWithEncoding('gbk');
+                if (encoding === 'utf-8') {
+                  tryReadWithEncoding('gbk');
+                } else if (encoding === 'gbk') {
+                  tryReadWithEncoding('gb2312');
+                } else {
+                  // If all encodings failed, use the best available result
+                  const contentBody = result.length > 1 ? result : 'File content may have encoding issues';
+                                     const content = `[MARKDOWN FILE: ${file.name}]\n\n⚠️ Encoding Warning: This file may contain encoding issues.\n\n${contentBody}`;
+                   const integrity = preserveContentIntegrity(result, content, `MARKDOWN_${String(encoding).toUpperCase()}_FALLBACK`);
+                   integrity.hasLossWarning = true;
+                   console.log(`⚠️ Markdown file processed with encoding issues: ${file.name}`);
+                   resolve({ content, integrity });
+                }
               }
             } else {
               const content = `[MARKDOWN FILE: ${file.name}]\n\nFile content is empty or unreadable`;
@@ -919,6 +949,7 @@ Suggested Solutions:
                 hasLossWarning: true,
                 extractionMethod: 'EMPTY_MARKDOWN'
               };
+              console.log(`❌ Markdown file is empty: ${file.name}`);
               resolve({ content, integrity });
             }
           } else {
