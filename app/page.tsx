@@ -118,6 +118,7 @@ export default function Home() {
     
     // Prepare context from uploaded files
     const completedFiles = uploadedFiles.filter(f => f.status === 'completed' && f.content);
+    const failedFiles = uploadedFiles.filter(f => f.status === 'error');
     let contextPrompt = message;
     
     if (completedFiles.length > 0) {
@@ -132,6 +133,19 @@ ${fileContexts}
 User Question: ${message}
 
 Please provide a detailed analysis based on the uploaded documents. If the documents don't contain relevant information to answer the question, please indicate that and provide general guidance.`;
+    } else if (failedFiles.length > 0) {
+      // If there are files but content extraction failed
+      const failedFileNames = failedFiles.map(f => f.name).join(', ');
+      contextPrompt = `The user has uploaded ${failedFiles.length} file(s) (${failedFileNames}), but content extraction failed. 
+
+User Question: ${message}
+
+Since I cannot read the uploaded document content, I'll provide a general response to your question. However, please note that for a more accurate analysis, you may need to:
+1. Convert your document to .txt format
+2. Copy and paste the document content directly into the chat
+3. Ensure the document is not corrupted or password-protected
+
+Now, let me address your question based on general economics knowledge:`;
     }
     
     try {
@@ -224,6 +238,7 @@ Please provide a detailed analysis based on the uploaded documents. If the docum
     
     // Check if there are uploaded files with content
     const completedFiles = uploadedFiles.filter(f => f.status === 'completed' && f.content);
+    const failedFiles = uploadedFiles.filter(f => f.status === 'error');
     
     if (completedFiles.length > 0) {
       return `${randomResponse} 
@@ -233,6 +248,19 @@ Based on the ${completedFiles.length} document(s) you've uploaded (${completedFi
 [DEMO MODE] In the full version with API keys configured, I would provide a detailed analysis of your uploaded documents. For now, this is a simulated response. Please configure your API keys in the settings to enable real document analysis.
 
 The uploaded files contain valuable economic information that would be analyzed in detail with real AI integration.`;
+    } else if (failedFiles.length > 0) {
+      return `${randomResponse}
+
+我注意到您上传了 ${failedFiles.length} 个文档 (${failedFiles.map(f => f.name).join(', ')})，但是文档内容提取失败了。
+
+关于您的问题"${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}"，我将基于一般经济学知识来回答，但为了获得更准确的文档分析，建议您：
+
+1. **转换文档格式**：将DOC文档另存为TXT格式
+2. **复制粘贴内容**：直接将文档中的文字复制到聊天框中
+3. **检查文档**：确保文档没有损坏或密码保护
+4. **配置API密钥**：在设置中配置真实的API密钥以获得更好的文档处理能力
+
+[演示模式] 如果配置了API密钥，系统将提供更强大的文档分析功能。`;
     }
     
     return `${randomResponse} Your question about "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}" is an excellent inquiry. In economics, this involves supply and demand relationships, market efficiency, consumer behavior, and many other aspects. Let me explain in detail...`;
@@ -444,6 +472,75 @@ The uploaded files contain valuable economic information that would be analyzed 
     }
   };
 
+  // Enhanced DOC content extraction attempt
+  const extractDocText = async (file: File): Promise<string> => {
+    try {
+      // Try multiple encoding approaches for DOC files
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Try UTF-8 first
+      let content = '';
+      try {
+        const decoder = new TextDecoder('utf-8', { fatal: false });
+        content = decoder.decode(uint8Array);
+      } catch {
+        // Fallback to other encodings for Chinese documents
+        try {
+          const decoder = new TextDecoder('gb2312', { fatal: false });
+          content = decoder.decode(uint8Array);
+        } catch {
+          try {
+            const decoder = new TextDecoder('gbk', { fatal: false });
+            content = decoder.decode(uint8Array);
+          } catch {
+            const decoder = new TextDecoder('utf-8', { fatal: false });
+            content = decoder.decode(uint8Array);
+          }
+        }
+      }
+      
+      // Extract readable text from DOC binary content
+      // DOC files contain readable text mixed with binary data
+      let extractedText = '';
+      
+      // Method 1: Look for consecutive readable characters (including Chinese)
+      const readableChunks = content.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007e\u00a0-\u00ff]{10,}/g);
+      if (readableChunks && readableChunks.length > 0) {
+        extractedText = readableChunks
+          .filter(chunk => {
+            // Filter out chunks that are mostly control characters or binary data
+            const validChars = chunk.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007e]/g);
+            return validChars && validChars.length > chunk.length * 0.3;
+          })
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+      
+      // Method 2: If method 1 fails, try basic text extraction
+      if (extractedText.length < 50) {
+        const lines = content.split(/[\r\n]+/);
+        const textLines = lines.filter(line => {
+          const cleanLine = line.trim();
+          return cleanLine.length > 5 && 
+                 /[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007e]/.test(cleanLine) &&
+                 !cleanLine.match(/^[\x00-\x1f\x7f-\x9f]+$/);
+        });
+        extractedText = textLines.join('\n').slice(0, 5000);
+      }
+      
+      if (extractedText.length > 50) {
+        return `[WORD DOCUMENT: ${file.name}]\n\n提取的内容预览：\n\n${extractedText}`;
+      } else {
+        return `[WORD DOCUMENT: ${file.name}]\n注意：无法从此DOC文档中提取可读内容。这可能是因为：\n1. 文档格式复杂或受保护\n2. 文档包含主要是图片或表格\n3. 编码问题\n\n建议：请将文档另存为.txt格式，或复制文本内容手动粘贴。`;
+      }
+    } catch (error) {
+      console.error('DOC extraction error:', error);
+      return `[WORD DOCUMENT: ${file.name}]\n错误：无法读取DOC文档内容。请将文档转换为TXT格式或复制内容后手动输入。`;
+    }
+  };
+
   // Read file content based on file type
   const readFileContent = async (file: File): Promise<string> => {
     const fileName = file.name.toLowerCase();
@@ -453,6 +550,9 @@ The uploaded files contain valuable economic information that would be analyzed 
       return await extractEpubText(file);
     } else if (fileName.endsWith('.mobi') || file.type === 'application/x-mobipocket-ebook') {
       return await extractMobiText(file);
+    } else if (fileName.endsWith('.doc') || (file.type.includes('word') && !fileName.endsWith('.docx'))) {
+      // Handle DOC files with enhanced extraction
+      return await extractDocText(file);
     }
     
     // Handle other formats with FileReader
@@ -470,9 +570,9 @@ The uploaded files contain valuable economic information that would be analyzed 
         } else if (file.type === 'application/pdf' || fileName.endsWith('.pdf')) {
           // For now, we'll show a message that PDF parsing is not yet implemented
           resolve(`[PDF FILE: ${file.name}]\nNote: PDF content extraction is not yet implemented. Please copy and paste the text content manually or convert to .txt format.`);
-        } else if (file.type.includes('word') || fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
-          // For now, we'll show a message that DOCX parsing is not yet implemented
-          resolve(`[WORD DOCUMENT: ${file.name}]\nNote: Word document content extraction is not yet implemented. Please copy and paste the text content manually or convert to .txt format.`);
+        } else if (file.type.includes('word') || fileName.endsWith('.docx')) {
+          // For DOCX files, we still need to implement proper extraction
+          resolve(`[WORD DOCUMENT: ${file.name}]\nNote: DOCX content extraction is not yet implemented. Please copy and paste the text content manually or convert to .txt format.`);
         } else {
           // Try to read as text anyway for other formats
           try {
@@ -487,7 +587,7 @@ The uploaded files contain valuable economic information that would be analyzed 
         reject(new Error(`Failed to read file: ${file.name}`));
       };
       
-      reader.readAsText(file);
+      reader.readAsText(file, 'utf-8');
     });
   };
 
@@ -499,20 +599,39 @@ The uploaded files contain valuable economic information that would be analyzed 
     try {
       const content = await readFileContent(file.file);
       
-      setUploadedFiles(prev => 
-        prev.map(f => 
-          f.id === fileId 
-            ? { ...f, content: content }
-            : f
-        )
-      );
-    } catch (error) {
-      console.error('Failed to read file content:', error);
+      // Check if content extraction was successful
+      const isExtractionSuccessful = content && 
+        content.length > 50 && 
+        !content.includes('内容提取失败') && 
+        !content.includes('Content extraction failed') &&
+        !content.includes('无法从此DOC文档中提取可读内容') &&
+        !content.includes('错误：无法读取DOC文档内容');
       
       setUploadedFiles(prev => 
         prev.map(f => 
           f.id === fileId 
-            ? { ...f, status: 'error' }
+            ? { 
+                ...f, 
+                content: content,
+                status: isExtractionSuccessful ? 'completed' : 'error'
+              }
+            : f
+        )
+      );
+
+      // Log extraction result for debugging
+      if (!isExtractionSuccessful) {
+        console.warn(`Content extraction failed for ${file.name}:`, content);
+      }
+    } catch (error) {
+      console.error('Failed to read file content:', error);
+      
+      const errorMessage = `[文件处理错误: ${file.name}]\n错误：${error instanceof Error ? error.message : '未知错误'}\n\n建议：\n1. 确保文件未损坏\n2. 尝试将文档另存为.txt格式\n3. 或者复制文档内容手动粘贴`;
+      
+      setUploadedFiles(prev => 
+        prev.map(f => 
+          f.id === fileId 
+            ? { ...f, status: 'error', content: errorMessage }
             : f
         )
       );
