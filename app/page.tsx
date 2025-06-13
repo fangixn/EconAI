@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { 
   Brain, 
   Upload, 
@@ -488,30 +487,30 @@ export default function Home() {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 mb-2">Example questions:</p>
                   <div className="flex flex-wrap gap-2">
-                                         <Button 
-                       variant="ghost" 
-                       size="sm" 
-                       className="text-blue-600 hover:bg-blue-50"
-                       onClick={() => handleExampleClick("What are Kahneman's core insights?")}
-                     >
-                       What are Kahneman's core insights?
-                     </Button>
-                     <Button 
-                       variant="ghost" 
-                       size="sm" 
-                       className="text-blue-600 hover:bg-blue-50"
-                       onClick={() => handleExampleClick("Explain behavioral economics")}
-                     >
-                       Explain behavioral economics
-                     </Button>
-                     <Button 
-                       variant="ghost" 
-                       size="sm" 
-                       className="text-blue-600 hover:bg-blue-50"
-                       onClick={() => handleExampleClick("Market efficiency theory")}
-                     >
-                       Market efficiency theory
-                     </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-blue-600 hover:bg-blue-50"
+                      onClick={() => handleExampleClick("What are Kahneman's core insights?")}
+                    >
+                      What are Kahneman's core insights?
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-blue-600 hover:bg-blue-50"
+                      onClick={() => handleExampleClick("Explain behavioral economics")}
+                    >
+                      Explain behavioral economics
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-blue-600 hover:bg-blue-50"
+                      onClick={() => handleExampleClick("Market efficiency theory")}
+                    >
+                      Market efficiency theory
+                    </Button>
                   </div>
                 </div>
                 
@@ -618,7 +617,12 @@ export default function Home() {
                                     <span>Uploading...</span>
                                     <span>{Math.round(file.progress)}%</span>
                                   </div>
-                                  <Progress value={file.progress} className="h-2" />
+                                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-2 bg-blue-600"
+                                      style={{ width: `${Math.round(file.progress)}%` }}
+                                    ></div>
+                                  </div>
                                 </div>
                               )}
                             </div>
