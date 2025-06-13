@@ -149,16 +149,16 @@ export default function Home() {
               <Button 
                 variant="ghost" 
                 className="text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 font-medium"
-                onClick={() => scrollToSection('resources')}
+                onClick={() => scrollToSection('try-now')}
               >
-                Resources
+                Best Practices
               </Button>
               <Button 
                 variant="ghost" 
                 className="text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 font-medium"
-                onClick={() => scrollToSection('try-now')}
+                onClick={() => scrollToSection('resources')}
               >
-                Try Now
+                Resources
               </Button>
               <Button 
                 className="econai-button-primary px-6"
@@ -173,52 +173,52 @@ export default function Home() {
 
       <main className="max-w-7xl mx-auto px-6">
         {/* Hero Section */}
-        <section id="features" className="text-center py-20">
-          <div className="mb-6">
-            <div className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium mb-8">
-              <Sparkles className="h-4 w-4 mr-2" />
+        <section id="features" className="text-center py-12">
+          <div className="mb-4">
+            <div className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium mb-6">
+              <Sparkles className="h-3 w-3 mr-2" />
               Professional Economics AI
             </div>
           </div>
           
-          <h1 className="text-6xl font-bold mb-12 leading-tight">
+          <h1 className="text-4xl md:text-5xl font-bold mb-8 leading-tight">
             Your AI-Powered<br />
             <span className="econai-gradient-text">Economics</span> Knowledge Base
           </h1>
           
           {/* Economics Specialization Areas */}
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold text-slate-800 mb-8">Economics Specialization Areas</h2>
-            <p className="text-lg text-slate-600 mb-10">Comprehensive coverage across all major economics disciplines</p>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">Economics Specialization Areas</h2>
+            <p className="text-base text-slate-600 mb-6">Comprehensive coverage across all major economics disciplines</p>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
               {economicsAreas.map((area, index) => (
                 <Card key={index} className="econai-card text-center hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0">
-                  <CardHeader className="pb-4">
-                    <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4">
-                      <area.icon className="h-8 w-8 text-white" />
+                  <CardHeader className="pb-2 pt-4">
+                    <div className="w-12 h-12 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-3">
+                      <area.icon className="h-6 w-6 text-white" />
                     </div>
-                    <CardTitle className="text-lg text-slate-800">{area.title}</CardTitle>
+                    <CardTitle className="text-base text-slate-800">{area.title}</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-slate-600">{area.desc}</CardDescription>
+                  <CardContent className="pt-1 pb-4">
+                    <CardDescription className="text-sm text-slate-600 leading-relaxed">{area.desc}</CardDescription>
                   </CardContent>
                 </Card>
               ))}
             </div>
           </div>
           
-          <div className="flex justify-center space-x-4">
+          <div className="flex justify-center space-x-3 mt-6">
             <Button 
               onClick={handleGetStarted}
-              className="econai-button-primary px-8 py-4 text-lg h-auto"
+              className="econai-button-primary px-6 py-3 text-base h-auto"
             >
               Start Exploring
-              <ArrowRight className="h-5 w-5 ml-2" />
+              <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
             <Button 
               variant="outline"
               onClick={() => scrollToSection('how-it-works')}
-              className="px-8 py-4 text-lg h-auto border-2 hover:bg-slate-50"
+              className="px-6 py-3 text-base h-auto border-2 hover:bg-slate-50"
             >
               Learn How It Works
             </Button>
@@ -228,37 +228,37 @@ export default function Home() {
 
 
         {/* AI Expert Selection & Quick Start Chat */}
-        <section id="how-it-works" className="mb-20">
-          <Card className="econai-card border-0 max-w-5xl mx-auto p-8">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-slate-800 mb-4">Choose Your AI Economics Expert & Start Chatting</h2>
-              <p className="text-lg text-slate-600">Select your preferred AI model and begin your economics analysis</p>
+        <section id="how-it-works" className="mb-16">
+          <Card className="econai-card border-0 max-w-4xl mx-auto p-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-slate-800 mb-3">Choose Your AI Economics Expert & Start Chatting</h2>
+              <p className="text-base text-slate-600">Select your preferred AI model and begin your economics analysis</p>
             </div>
 
             {/* AI Model Selection */}
-            <div className="mb-8">
-              <div className="flex items-center justify-center mb-4 space-x-4">
-                <h3 className="text-lg font-semibold text-slate-800">Available AI Experts</h3>
+            <div className="mb-6">
+              <div className="flex items-center justify-center mb-3 space-x-3">
+                <h3 className="text-base font-semibold text-slate-800">Available AI Experts</h3>
                 <ApiStatusIndicator 
                   configuredCount={getConfiguredModelsCount()} 
                   totalCount={Object.keys(API_CONFIGS).length}
                 />
               </div>
               <div className="flex justify-center">
-                <div className="flex flex-wrap gap-3 bg-slate-50 p-3 rounded-2xl border">
+                <div className="flex flex-wrap gap-2 bg-slate-50 p-2.5 rounded-2xl border">
                   {Object.entries(API_CONFIGS).map(([key, config]) => (
                     <Button
                       key={key}
                       variant={selectedModel === key ? "default" : "ghost"}
                       onClick={() => setSelectedModel(key)}
-                      className={`min-w-[140px] h-12 transition-all duration-200 ${
+                      className={`min-w-[120px] h-10 text-sm transition-all duration-200 ${
                         selectedModel === key 
                           ? 'econai-button-primary shadow-lg' 
                           : 'hover:bg-white hover:shadow-md'
                       }`}
                     >
                       {config.name}
-                      {hasApiKey(key) && <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700">✓</Badge>}
+                      {hasApiKey(key) && <Badge variant="secondary" className="ml-1.5 text-xs bg-green-100 text-green-700">✓</Badge>}
                     </Button>
                   ))}
                 </div>
@@ -266,27 +266,27 @@ export default function Home() {
             </div>
 
             {/* Selected Expert Info */}
-            <div className="bg-blue-50 rounded-xl p-6 mb-8 border border-blue-100">
-              <div className="flex items-center justify-center mb-3">
-                <Brain className="h-6 w-6 text-blue-600 mr-2" />
-                <h4 className="text-xl font-semibold text-slate-800">
+            <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-100">
+              <div className="flex items-center justify-center mb-2">
+                <Brain className="h-5 w-5 text-blue-600 mr-2" />
+                <h4 className="text-lg font-semibold text-slate-800">
                   Current Expert: {API_CONFIGS[selectedModel].name}
                 </h4>
               </div>
-              <p className="text-slate-600 text-center">
+              <p className="text-sm text-slate-600 text-center">
                 {hasApiKey(selectedModel) 
                   ? "✅ API configured and ready for advanced analysis" 
                   : "⚠️ API key required for full functionality"}
               </p>
               {!hasApiKey(selectedModel) && (
-                <div className="text-center mt-3">
+                <div className="text-center mt-2">
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={() => setSettingsOpen(true)}
-                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50 text-sm h-8"
                   >
-                    <Settings className="h-4 w-4 mr-2" />
+                    <Settings className="h-3 w-3 mr-1.5" />
                     Configure API Key
                   </Button>
                 </div>
@@ -294,46 +294,46 @@ export default function Home() {
             </div>
 
             {/* Quick Start Chat */}
-            <div id="get-started" className="space-y-6">
+            <div id="get-started" className="space-y-4">
               <div>
-                <label className="text-base font-medium mb-3 block text-slate-700">
+                <label className="text-sm font-medium mb-2 block text-slate-700">
                   Your Economics Question (Optional)
                 </label>
                 <Textarea
                   placeholder="e.g., Explain the mechanisms of inflation's impact on the economy..."
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  rows={4}
-                  className="text-base"
+                  rows={3}
+                  className="text-sm"
                 />
               </div>
               
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-3">
                 <Button 
                   onClick={handleStartChat} 
-                  className="econai-button-primary py-4 text-lg h-auto"
+                  className="econai-button-primary py-3 text-base h-auto"
                 >
-                  <MessageCircle className="h-5 w-5 mr-2" />
+                  <MessageCircle className="h-4 w-4 mr-2" />
                   {question.trim() ? 'Start Analysis Chat' : 'Enter Chat Page'}
-                  <ArrowRight className="h-5 w-5 ml-2" />
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
                 
                 <Button 
                   variant="outline" 
                   onClick={() => setSettingsOpen(true)}
-                  className="py-4 text-lg h-auto border-2 hover:bg-slate-50"
+                  className="py-3 text-base h-auto border-2 hover:bg-slate-50"
                 >
-                  <Settings className="h-5 w-5 mr-2" />
+                  <Settings className="h-4 w-4 mr-2" />
                   Manage API Settings
                 </Button>
               </div>
 
               {question.trim() && (
-                <div className="bg-slate-50 rounded-lg p-4 border">
-                  <p className="text-sm text-slate-600 mb-2">
+                <div className="bg-slate-50 rounded-lg p-3 border">
+                  <p className="text-xs text-slate-600 mb-1">
                     <strong>Preview:</strong> You will ask {API_CONFIGS[selectedModel].name}:
                   </p>
-                  <p className="text-slate-700 italic">"{question}"</p>
+                  <p className="text-sm text-slate-700 italic">"{question}"</p>
                 </div>
               )}
             </div>
