@@ -26,7 +26,7 @@ import {
   Plus,
   Trash2
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 type AIModel = 'gpt-3.5-turbo' | 'gpt-4' | 'claude-2';
 
@@ -45,7 +45,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
 
   const aiModels = [
     { id: 'chatgpt', name: 'ChatGPT', color: 'bg-green-500' },
@@ -181,13 +180,14 @@ export default function Home() {
           您的智能经济分析助手，为您提供专业的经济分析和建议
         </p>
         <div className="space-y-4">
-          <Button
-            size="lg"
-            onClick={() => router.push('/chat')}
-            className="w-full sm:w-auto"
-          >
-            开始对话
-          </Button>
+          <Link href="/chat">
+            <Button
+              size="lg"
+              className="w-full sm:w-auto"
+            >
+              开始对话
+            </Button>
+          </Link>
           <p className="text-sm text-gray-500">
             支持多种 AI 模型，包括 GPT-3.5、GPT-4 和 Claude 2
           </p>
