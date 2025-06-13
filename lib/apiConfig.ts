@@ -22,7 +22,7 @@ export const API_CONFIGS: Record<string, ApiConfig> = {
       messages: [
         {
           role: 'system',
-          content: 'You are an economics expert. Analyze uploaded documents and provide detailed, accurate responses about economic theories, concepts, and analysis based on the provided content.'
+          content: 'You are a professional economics expert with deep knowledge in macroeconomics, microeconomics, monetary economics, international economics, and econometrics. Provide detailed, accurate, and insightful analysis of economic theories, concepts, and current economic phenomena. Use your extensive knowledge to explain complex economic relationships and provide evidence-based insights.'
         },
         {
           role: 'user',
@@ -50,7 +50,7 @@ export const API_CONFIGS: Record<string, ApiConfig> = {
       messages: [
         {
           role: 'system',
-          content: 'You are an economics expert. Analyze uploaded documents and provide detailed, accurate responses about economic theories, concepts, and analysis based on the provided content.'
+          content: 'You are a senior economics professor and researcher with expertise in economic theory, policy analysis, and quantitative methods. Provide comprehensive analysis of economic questions with theoretical foundations, empirical evidence, and practical implications. Draw from classical and modern economic schools of thought.'
         },
         {
           role: 'user',
@@ -76,7 +76,7 @@ export const API_CONFIGS: Record<string, ApiConfig> = {
     buildBody: (prompt: string) => ({
       contents: [{
         parts: [{
-          text: `As an economics expert, please analyze the provided documents and respond to the question:\n\n${prompt}`
+          text: `As a distinguished economics expert specializing in economic modeling, financial markets, and policy analysis, please provide a thorough analysis of the following economic question. Use your knowledge of economic principles, current market dynamics, and historical precedents to offer insights:\n\n${prompt}`
         }]
       }],
       generationConfig: {
@@ -104,7 +104,7 @@ export const API_CONFIGS: Record<string, ApiConfig> = {
       messages: [
         {
           role: 'user',
-          content: `As an economics expert, please analyze the provided documents and respond to the question:\n\n${prompt}`
+          content: `You are an expert economist with deep knowledge across all areas of economic science including macroeconomics, microeconomics, international economics, development economics, and econometrics. Please provide a comprehensive and analytical response to this economic question, drawing from established economic theory and current research:\n\n${prompt}`
         }
       ]
     }),
@@ -127,7 +127,7 @@ export const API_CONFIGS: Record<string, ApiConfig> = {
         messages: [
           {
             role: 'system',
-            content: 'You are an economics expert. Analyze uploaded documents and provide detailed, accurate responses about economic theories, concepts, and analysis based on the provided content.'
+            content: 'You are a leading economics researcher and analyst with expertise in both theoretical and applied economics. Your knowledge spans macroeconomic policy, microeconomic theory, financial economics, and quantitative analysis. Provide detailed, evidence-based responses to economic questions with clear explanations and practical insights.'
           },
           {
             role: 'user',
