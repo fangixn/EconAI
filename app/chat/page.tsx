@@ -27,6 +27,8 @@ import {
   Shield
 } from 'lucide-react';
 import { API_CONFIGS } from '@/lib/apiConfig';
+import { useApiSettings } from '@/hooks/useApiSettings';
+import { ApiStatusIndicator } from '@/components/ApiStatusIndicator';
 
 interface Message {
   id: string;
@@ -57,11 +59,20 @@ export default function ChatPage() {
   const [currentMessage, setCurrentMessage] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [apiSettings, setApiSettings] = useState<ApiSettings>({});
   const [tempApiSettings, setTempApiSettings] = useState<ApiSettings>({});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
+  
+  // 使用自定义钩子管理API设置
+  const { 
+    apiSettings, 
+    isLoaded: apiSettingsLoaded, 
+    saveApiSettings, 
+    hasApiKey, 
+    getApiKey, 
+    getConfiguredModelsCount 
+  } = useApiSettings();
 
   // Auto scroll to bottom
   const scrollToBottom = () => {
@@ -80,13 +91,7 @@ export default function ChatPage() {
       setSelectedModel(modelParam);
     }
 
-    // Load API settings from localStorage
-    const savedSettings = localStorage.getItem('apiSettings');
-    if (savedSettings) {
-      const settings = JSON.parse(savedSettings);
-      setApiSettings(settings);
-      setTempApiSettings(settings);
-    }
+    // API设置会通过useApiSettings钩子自动加载
 
     // Load chat history from localStorage
     const savedSessions = localStorage.getItem('chatSessions');
@@ -104,7 +109,14 @@ export default function ChatPage() {
       // Create new session or load recent session
       createNewSession();
     }
-  }, []);
+  }, [searchParams]);
+
+  // 当API设置加载完成时，同步到临时设置
+  useEffect(() => {
+    if (apiSettingsLoaded) {
+      setTempApiSettings(apiSettings);
+    }
+  }, [apiSettingsLoaded, apiSettings]);
 
   // Create new session
   const createNewSession = () => {
@@ -130,7 +142,7 @@ export default function ChatPage() {
   const handleSendMessage = async () => {
     if (!currentMessage.trim()) return;
     
-    const apiKey = apiSettings[selectedModel];
+    const apiKey = getApiKey(selectedModel);
     if (!apiKey) {
       alert('Please configure API key first');
       handleOpenSettings();
@@ -257,9 +269,12 @@ export default function ChatPage() {
 
   const handleSaveSettings = () => {
     // 保存设置并关闭对话框
-    setApiSettings(tempApiSettings);
-    localStorage.setItem('apiSettings', JSON.stringify(tempApiSettings));
-    setSettingsOpen(false);
+    const success = saveApiSettings(tempApiSettings);
+    if (success) {
+      setSettingsOpen(false);
+    } else {
+      alert('Failed to save API settings. Please try again.');
+    }
   };
 
   const handleCancelSettings = () => {
@@ -370,7 +385,14 @@ export default function ChatPage() {
           
           {/* Model Selection - 改为单列布局以确保完整显示 */}
           <div className="space-y-3">
-            <h3 className="text-base font-semibold text-slate-900">EconAI</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-900">EconAI</h3>
+              <ApiStatusIndicator 
+                configuredCount={getConfiguredModelsCount()} 
+                totalCount={Object.keys(API_CONFIGS).length}
+                className="scale-90"
+              />
+            </div>
             <div className="space-y-2">
               {Object.entries(API_CONFIGS).map(([key, config]) => (
                 <Button
@@ -383,7 +405,7 @@ export default function ChatPage() {
                   }`}
                 >
                   <span className="font-medium text-left truncate pr-2 flex-1">{config.name}</span>
-                  {apiSettings[key] && (
+                  {hasApiKey(key) && (
                     <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 flex-shrink-0">
                       ✓
                     </Badge>
@@ -627,30 +649,74 @@ export default function ChatPage() {
         </ScrollArea>
 
         {/* Input Area */}
-        <div className="bg-white border-t p-4">
+        <div className="econai-chat-input-container p-6">
           <div className="flex space-x-4">
-            <Textarea
-              placeholder="Ask AI Economics Experts..."
-              value={currentMessage}
-              onChange={(e) => setCurrentMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              rows={3}
-              className="flex-1 resize-none econai-chat-input"
-            />
+            <div className="flex-1 relative">
+              <Textarea
+                placeholder="Ask your economics questions here..."
+                value={currentMessage}
+                onChange={(e) => setCurrentMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                rows={3}
+                className="w-full resize-none econai-chat-input pr-16 text-base"
+              />
+              {/* Inline Send Button */}
+              <Button 
+                onClick={handleSendMessage}
+                disabled={isLoading || !currentMessage.trim()}
+                className="econai-inline-send absolute bottom-2 right-2 h-8 w-12 econai-button-primary"
+                size="sm"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            
+            {/* Main Send Button */}
             <Button 
               onClick={handleSendMessage}
               disabled={isLoading || !currentMessage.trim()}
-              className="self-end"
+              className="econai-send-button econai-button-primary px-8 py-4 h-auto font-medium text-base min-w-[120px]"
+              size="default"
             >
               {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  <span>Sending</span>
+                </>
               ) : (
-                <Send className="h-4 w-4" />
+                <>
+                  <Send className="h-5 w-5 mr-2" />
+                  <span>Send</span>
+                </>
               )}
             </Button>
           </div>
-          <div className="mt-2 text-xs text-gray-500">
-            Press Enter to send, Shift + Enter for new line
+          
+          {/* Bottom Info Bar */}
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center space-x-4 text-xs text-gray-500">
+              <span className="flex items-center">
+                <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                Press Enter to send
+              </span>
+              <span>Shift + Enter for new line</span>
+            </div>
+            <div className="flex items-center space-x-3 text-xs">
+              {currentMessage.length > 0 && (
+                <span className="econai-char-counter text-blue-600 font-medium">
+                  {currentMessage.length} characters
+                </span>
+              )}
+              {getConfiguredModelsCount() > 0 && (
+                <span className="text-green-600 font-medium">
+                  ✓ {getConfiguredModelsCount()} AI models configured
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

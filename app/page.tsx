@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Settings, MessageCircle, Brain, TrendingUp, DollarSign, BarChart3, PieChart, ExternalLink, BookOpen, Building, Globe, ArrowRight, Sparkles, Upload, CheckCircle, XCircle, FileText, MessageSquare, Shield } from 'lucide-react';
 import { API_CONFIGS } from '@/lib/apiConfig';
+import { useApiSettings } from '@/hooks/useApiSettings';
+import { ApiStatusIndicator } from '@/components/ApiStatusIndicator';
 
 interface ApiSettings {
   [key: string]: string;
@@ -19,8 +21,17 @@ export default function Home() {
   const router = useRouter();
   const [selectedModel, setSelectedModel] = useState<string>('openai');
   const [question, setQuestion] = useState<string>('');
-  const [apiSettings, setApiSettings] = useState<ApiSettings>({});
   const [settingsOpen, setSettingsOpen] = useState(false);
+  
+  // 使用自定义钩子管理API设置
+  const { 
+    apiSettings, 
+    isLoaded: apiSettingsLoaded, 
+    saveApiSettings, 
+    hasApiKey, 
+    getApiKey, 
+    getConfiguredModelsCount 
+  } = useApiSettings();
 
   const economicsAreas = [
     { icon: TrendingUp, title: 'Macroeconomics', desc: 'National economic policy, inflation, GDP analysis' },
@@ -60,14 +71,14 @@ export default function Home() {
       return;
     }
     
-    const apiKey = apiSettings[selectedModel];
+    const apiKey = getApiKey(selectedModel);
     if (!apiKey) {
       alert('Please configure API key first');
       setSettingsOpen(true);
       return;
     }
 
-    localStorage.setItem('apiSettings', JSON.stringify(apiSettings));
+    // API设置通过钩子自动保存，无需手动保存
     
     const params = new URLSearchParams({
       model: selectedModel,
@@ -76,11 +87,13 @@ export default function Home() {
     router.push(`/chat?${params.toString()}`);
   };
 
+  // 主页不需要临时API设置，直接保存
   const handleApiSettingChange = (modelKey: string, value: string) => {
-    setApiSettings(prev => ({
-      ...prev,
+    const newSettings = {
+      ...apiSettings,
       [modelKey]: value
-    }));
+    };
+    saveApiSettings(newSettings);
   };
 
   const handleExampleClick = (example: string) => {
@@ -217,7 +230,13 @@ export default function Home() {
 
             {/* AI Model Selection */}
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 text-center">Available AI Experts</h3>
+              <div className="flex items-center justify-center mb-4 space-x-4">
+                <h3 className="text-lg font-semibold text-slate-800">Available AI Experts</h3>
+                <ApiStatusIndicator 
+                  configuredCount={getConfiguredModelsCount()} 
+                  totalCount={Object.keys(API_CONFIGS).length}
+                />
+              </div>
               <div className="flex justify-center">
                 <div className="flex flex-wrap gap-3 bg-slate-50 p-3 rounded-2xl border">
                   {Object.entries(API_CONFIGS).map(([key, config]) => (
@@ -232,7 +251,7 @@ export default function Home() {
                       }`}
                     >
                       {config.name}
-                      {apiSettings[key] && <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700">✓</Badge>}
+                      {hasApiKey(key) && <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700">✓</Badge>}
                     </Button>
                   ))}
                 </div>
@@ -248,11 +267,11 @@ export default function Home() {
                 </h4>
               </div>
               <p className="text-slate-600 text-center">
-                {apiSettings[selectedModel] 
+                {hasApiKey(selectedModel) 
                   ? "✅ API configured and ready for advanced analysis" 
                   : "⚠️ API key required for full functionality"}
               </p>
-              {!apiSettings[selectedModel] && (
+              {!hasApiKey(selectedModel) && (
                 <div className="text-center mt-3">
                   <Button 
                     variant="outline" 
@@ -507,11 +526,11 @@ export default function Home() {
                       id={`api-key-${key}`}
                       type="password"
                       placeholder={`Enter ${config.name} API key`}
-                      value={apiSettings[key] || ''}
+                      value={getApiKey(key)}
                       onChange={(e) => handleApiSettingChange(key, e.target.value)}
                       className="bg-white"
                     />
-                    {apiSettings[key] && (
+                    {hasApiKey(key) && (
                       <div className="flex items-center text-xs text-green-600">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         API密钥已配置
