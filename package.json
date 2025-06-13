@@ -1,25 +1,12 @@
 {
-  "name": "econai",
-  "version": "1.0.0",
-  "description": "专业的经济学AI知识库平台",
-  "author": "fangxin <fangin1230@gmail.com>",
-  "homepage": "https://github.com/yourusername/econai#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/yourusername/econai.git"
-  },
-  "bugs": {
-    "url": "https://github.com/yourusername/econai/issues"
-  },
-  "keywords": ["economics", "ai", "nextjs", "education", "knowledge-base"],
+  "name": "nextjs",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "export": "next build && next export",
-    "deploy": "npm run build && npx gh-pages -d out"
+    "lint": "next lint"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -80,8 +67,5 @@
     "typescript": "5.2.2",
     "vaul": "^0.9.9",
     "zod": "^3.23.8"
-  },
-  "devDependencies": {
-    "gh-pages": "^6.1.1"
   }
 }
