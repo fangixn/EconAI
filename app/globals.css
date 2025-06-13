@@ -88,7 +88,7 @@
   }
 }
 
-/* 自定义EconAI样式 */
+/* Custom EconAI Styles */
 @layer components {
   .econai-gradient-text {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -129,7 +129,7 @@
     color: white;
   }
 
-  /* 对话框强制颜色覆盖 - 确保最佳可读性 */
+  /* Dialog forced color override - ensure optimal readability */
   .econai-dialog {
     background: white !important;
     color: #0f172a !important;
@@ -181,7 +181,7 @@
     outline: none !important;
   }
 
-  /* Chat页面和Textarea组件的字体颜色修复 */
+  /* Chat page and Textarea component font color fix */
   .econai-chat-input {
     color: #0f172a !important;
     background: white !important;
@@ -202,7 +202,7 @@
     outline: none !important;
   }
 
-  /* 全局修复所有input和textarea的颜色问题 */
+  /* Global fix for all input and textarea color issues */
   input[type="text"], 
   input[type="password"], 
   input[type="email"], 
@@ -218,7 +218,7 @@
     opacity: 1 !important;
   }
 
-  /* 聊天页面AI专家按钮样式 */
+  /* Chat page AI expert button styles */
   .econai-ai-expert-button {
     min-height: 44px !important;
     white-space: nowrap !important;
@@ -242,7 +242,7 @@
     white-space: nowrap !important;
   }
 
-  /* 侧边栏滚动条美化 */
+  /* Sidebar scrollbar styling */
   .econai-sidebar-scroll::-webkit-scrollbar {
     width: 6px;
   }
@@ -261,7 +261,7 @@
     background: #94a3b8;
   }
 
-  /* API设置对话框专用样式 */
+  /* API settings dialog specific styles */
   .econai-api-dialog {
     max-height: 80vh !important;
   }
@@ -289,7 +289,7 @@
     background: #94a3b8;
   }
 
-  /* API申请链接样式 */
+  /* API application link styles */
   .econai-api-link {
     position: relative;
     transition: all 0.2s ease;
@@ -314,7 +314,7 @@
     width: 100%;
   }
 
-  /* API模型卡片样式 */
+  /* API model card styles */
   .econai-api-model-card {
     background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
     border: 1px solid #e2e8f0;
@@ -326,14 +326,14 @@
     transform: translateY(-2px);
   }
 
-  /* 固定按钮区域样式 */
+  /* Fixed button area styles */
   .econai-dialog-footer {
     background: linear-gradient(to top, #ffffff 0%, rgba(255, 255, 255, 0.95) 100%);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
   }
 
-  /* 聊天页面紧凑卡片样式 */
+  /* Chat page compact card styles */
   .border-l-3 {
     border-left-width: 3px !important;
   }
@@ -347,14 +347,14 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   }
 
-  /* 聊天欢迎区域样式 */
+  /* Chat welcome area styles */
   .econai-chat-welcome {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
   }
 
-  /* 聊天输入区域样式 */
+  /* Chat input area styles */
   .econai-chat-input-container {
     background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
     border-top: 2px solid #e2e8f0;
@@ -372,7 +372,7 @@
     transform: translateY(-1px) !important;
   }
 
-  /* 发送按钮动画 */
+  /* Send button animations */
   .econai-send-button {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     position: relative !important;
@@ -393,7 +393,7 @@
     cursor: not-allowed !important;
   }
 
-  /* 发送按钮脉冲效果 */
+  /* Send button pulse effect */
   .econai-send-button:not(:disabled)::before {
     content: '';
     position: absolute;
@@ -409,13 +409,13 @@
     left: 100%;
   }
 
-  /* 字符计数器样式 */
+  /* Character counter styles */
   .econai-char-counter {
     font-variant-numeric: tabular-nums;
     transition: color 0.2s ease;
   }
 
-  /* 输入框内置按钮样式 */
+  /* Input inline button styles */
   .econai-inline-send {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);

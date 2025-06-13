@@ -23,7 +23,7 @@ export default function Home() {
   const [question, setQuestion] = useState<string>('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   
-  // 使用自定义钩子管理API设置
+  // Use custom hook to manage API settings
   const { 
     apiSettings, 
     isLoaded: apiSettingsLoaded, 
@@ -78,7 +78,7 @@ export default function Home() {
       return;
     }
 
-    // API设置通过钩子自动保存，无需手动保存
+    // API settings are automatically saved through hook, no manual saving needed
     
     const params = new URLSearchParams({
       model: selectedModel,
@@ -87,7 +87,7 @@ export default function Home() {
     router.push(`/chat?${params.toString()}`);
   };
 
-  // 主页不需要临时API设置，直接保存
+  // Home page doesn't need temporary API settings, save directly
   const handleApiSettingChange = (modelKey: string, value: string) => {
     const newSettings = {
       ...apiSettings,
@@ -103,7 +103,7 @@ export default function Home() {
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
-      const headerHeight = 80; // 导航栏高度
+      const headerHeight = 80; // Navigation bar height
       const elementPosition = element.offsetTop - headerHeight;
       
       window.scrollTo({
@@ -145,6 +145,13 @@ export default function Home() {
                 onClick={() => scrollToSection('how-it-works')}
               >
                 How It Works
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 font-medium"
+                onClick={() => scrollToSection('resources')}
+              >
+                Resources
               </Button>
               <Button 
                 variant="ghost" 
@@ -427,7 +434,7 @@ export default function Home() {
         </section>
 
         {/* Economics Knowledge Resources */}
-        <section className="mb-20">
+        <section id="resources" className="mb-20">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-slate-800 mb-4">Economics Knowledge Resources</h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
@@ -486,10 +493,10 @@ export default function Home() {
               </DialogDescription>
             </DialogHeader>
             
-            {/* 滚动区域 */}
+            {/* Scrollable area */}
             <div className="flex-1 api-scroll-area space-y-6 mt-6 pr-2">
               {Object.entries(API_CONFIGS).map(([key, config]) => {
-                // 为每个模型定义API申请链接
+                // Define API application links for each model
                 const getApiLink = (modelKey: string) => {
                   switch (modelKey) {
                     case 'openai':
@@ -519,7 +526,7 @@ export default function Home() {
                         rel="noopener noreferrer"
                         className="econai-api-link text-sm text-blue-600 hover:text-blue-800 font-medium"
                       >
-                        获取API密钥 →
+                        Get API Key →
                       </a>
                     </div>
                     <Input
@@ -533,7 +540,7 @@ export default function Home() {
                     {hasApiKey(key) && (
                       <div className="flex items-center text-xs text-green-600">
                         <CheckCircle className="h-3 w-3 mr-1" />
-                        API密钥已配置
+                        API Key Configured
                       </div>
                     )}
                   </div>
@@ -541,13 +548,13 @@ export default function Home() {
               })}
             </div>
 
-            {/* 固定在底部的按钮区域 */}
+            {/* Fixed button area at bottom */}
             <div className="flex-shrink-0 flex justify-end space-x-3 mt-6 pt-6 border-t econai-dialog-footer">
               <Button variant="outline" onClick={() => setSettingsOpen(false)}>
-                取消
+                Cancel
               </Button>
               <Button onClick={() => setSettingsOpen(false)} className="econai-button-primary">
-                保存设置
+                Save Settings
               </Button>
             </div>
           </DialogContent>

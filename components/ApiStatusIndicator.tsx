@@ -20,18 +20,18 @@ export function ApiStatusIndicator({
       {hasAnyConfigured ? (
         <Badge variant="secondary" className="bg-green-100 text-green-700">
           <CheckCircle className="h-3 w-3 mr-1" />
-          {configuredCount}/{totalCount} API配置完成
+          {configuredCount}/{totalCount} APIs Configured
         </Badge>
       ) : (
         <Badge variant="outline" className="text-orange-600 border-orange-200">
           <Settings className="h-3 w-3 mr-1" />
-          需要配置API
+          API Setup Required
         </Badge>
       )}
       
       {isAllConfigured && (
         <span className="text-xs text-green-600 font-medium">
-          ✨ 全部就绪
+          ✨ All Ready
         </span>
       )}
     </div>

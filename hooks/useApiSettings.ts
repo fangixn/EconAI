@@ -10,7 +10,7 @@ export function useApiSettings() {
   const [apiSettings, setApiSettings] = useState<ApiSettings>({});
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // 加载API设置
+  // Load API settings
   useEffect(() => {
     try {
       const savedSettings = localStorage.getItem(API_SETTINGS_KEY);
@@ -23,14 +23,14 @@ export function useApiSettings() {
       }
     } catch (error) {
       console.error('Error loading API settings:', error);
-      // 如果JSON解析失败，清除损坏的数据
+              // If JSON parsing fails, clear corrupted data
       localStorage.removeItem(API_SETTINGS_KEY);
     } finally {
       setIsLoaded(true);
     }
   }, []);
 
-  // 保存API设置
+  // Save API settings
   const saveApiSettings = (newSettings: ApiSettings) => {
     try {
       localStorage.setItem(API_SETTINGS_KEY, JSON.stringify(newSettings));
@@ -43,7 +43,7 @@ export function useApiSettings() {
     }
   };
 
-  // 更新单个API设置
+  // Update single API setting
   const updateApiSetting = (modelKey: string, apiKey: string) => {
     const newSettings = {
       ...apiSettings,
@@ -52,14 +52,14 @@ export function useApiSettings() {
     return saveApiSettings(newSettings);
   };
 
-  // 删除API设置
+  // Delete API setting
   const removeApiSetting = (modelKey: string) => {
     const newSettings = { ...apiSettings };
     delete newSettings[modelKey];
     return saveApiSettings(newSettings);
   };
 
-  // 清除所有API设置
+  // Clear all API settings
   const clearAllApiSettings = () => {
     try {
       localStorage.removeItem(API_SETTINGS_KEY);
@@ -72,17 +72,17 @@ export function useApiSettings() {
     }
   };
 
-  // 检查API设置是否存在
+  // Check if API setting exists
   const hasApiKey = (modelKey: string) => {
     return !!apiSettings[modelKey];
   };
 
-  // 获取API密钥
+  // Get API key
   const getApiKey = (modelKey: string) => {
     return apiSettings[modelKey] || '';
   };
 
-  // 获取已配置的模型数量
+  // Get count of configured models
   const getConfiguredModelsCount = () => {
     return Object.keys(apiSettings).filter(key => apiSettings[key]).length;
   };

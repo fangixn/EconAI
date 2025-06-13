@@ -64,7 +64,7 @@ export default function ChatPage() {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
   
-  // 使用自定义钩子管理API设置
+  // Use custom hook to manage API settings
   const { 
     apiSettings, 
     isLoaded: apiSettingsLoaded, 
@@ -91,32 +91,64 @@ export default function ChatPage() {
       setSelectedModel(modelParam);
     }
 
-    // API设置会通过useApiSettings钩子自动加载
+    // API settings will be automatically loaded through useApiSettings hook
 
-    // Load chat history from localStorage
-    const savedSessions = localStorage.getItem('chatSessions');
-    if (savedSessions) {
-      setChatSessions(JSON.parse(savedSessions));
-    }
-
-    // Check if there's an initial question
-    const initialQuestion = searchParams.get('initialQuestion');
-    if (initialQuestion) {
-      setCurrentMessage(initialQuestion);
-      // Create new session
-      createNewSession();
-    } else {
-      // Create new session or load recent session
+    // Load chat history from localStorage with error handling
+    try {
+      const savedSessions = localStorage.getItem('chatSessions');
+      if (savedSessions) {
+        const parsedSessions = JSON.parse(savedSessions);
+        // Convert date strings back to Date objects
+        const sessionsWithDates = parsedSessions.map((session: any) => ({
+          ...session,
+          createdAt: new Date(session.createdAt),
+          updatedAt: new Date(session.updatedAt),
+          messages: session.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }))
+        }));
+        setChatSessions(sessionsWithDates);
+        
+        // Load the most recent session if no initial question
+        const initialQuestion = searchParams.get('initialQuestion');
+        if (initialQuestion) {
+          setCurrentMessage(initialQuestion);
+          createNewSession();
+        } else if (sessionsWithDates.length > 0) {
+          // Load the most recent session
+          const mostRecentSession = sessionsWithDates[0];
+          setCurrentSessionId(mostRecentSession.id);
+          setMessages(mostRecentSession.messages);
+        } else {
+          // No existing sessions, create new one
+          createNewSession();
+        }
+      } else {
+        // No saved sessions, create new one
+        createNewSession();
+      }
+    } catch (error) {
+      console.error('Error loading chat sessions:', error);
+      // If data is corrupted, clear it and start fresh
+      localStorage.removeItem('chatSessions');
       createNewSession();
     }
   }, [searchParams]);
 
-  // 当API设置加载完成时，同步到临时设置
+      // Sync to temporary settings when API settings loading is complete
   useEffect(() => {
     if (apiSettingsLoaded) {
       setTempApiSettings(apiSettings);
     }
   }, [apiSettingsLoaded, apiSettings]);
+
+  // Auto-save chat sessions whenever they change
+  useEffect(() => {
+    if (chatSessions.length > 0) {
+      saveSessions(chatSessions);
+    }
+  }, [chatSessions]);
 
   // Create new session
   const createNewSession = () => {
@@ -133,9 +165,21 @@ export default function ChatPage() {
     setMessages([]);
   };
 
-  // Save sessions to localStorage
+  // Save sessions to localStorage with error handling
   const saveSessions = (sessions: ChatSession[]) => {
-    localStorage.setItem('chatSessions', JSON.stringify(sessions));
+    try {
+      localStorage.setItem('chatSessions', JSON.stringify(sessions));
+    } catch (error) {
+      console.error('Error saving chat sessions:', error);
+      // Attempt to clear space and try again
+      try {
+        // Remove old sessions (keep only the latest 50)
+        const trimmedSessions = sessions.slice(0, 50);
+        localStorage.setItem('chatSessions', JSON.stringify(trimmedSessions));
+      } catch (retryError) {
+        console.error('Failed to save even trimmed sessions:', retryError);
+      }
+    }
   };
 
   // Send message
@@ -157,9 +201,25 @@ export default function ChatPage() {
       model: selectedModel
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setCurrentMessage('');
     setIsLoading(true);
+
+    // Update session with user message immediately
+    setChatSessions(prevSessions => {
+      return prevSessions.map(session => {
+        if (session.id === currentSessionId) {
+          return {
+            ...session,
+            messages: newMessages,
+            title: newMessages.length === 1 ? userMessage.content.slice(0, 30) + '...' : session.title,
+            updatedAt: new Date()
+          };
+        }
+        return session;
+      });
+    });
 
     try {
       const config = API_CONFIGS[selectedModel];
@@ -206,7 +266,7 @@ export default function ChatPage() {
             }
             return session;
           });
-          saveSessions(updatedSessions);
+          // Auto-save will be handled by useEffect
           return updatedSessions;
         });
         
@@ -221,7 +281,27 @@ export default function ChatPage() {
         timestamp: new Date(),
         model: selectedModel
       };
-      setMessages(prev => [...prev, errorMessage]);
+      
+      setMessages(prev => {
+        const newMessages = [...prev, errorMessage];
+        
+        // Update current session with error message
+        setChatSessions(prevSessions => {
+          const updatedSessions = prevSessions.map(session => {
+            if (session.id === currentSessionId) {
+              return {
+                ...session,
+                messages: newMessages,
+                updatedAt: new Date()
+              };
+            }
+            return session;
+          });
+          return updatedSessions;
+        });
+        
+        return newMessages;
+      });
     } finally {
       setIsLoading(false);
     }
@@ -248,7 +328,7 @@ export default function ChatPage() {
   const deleteSession = (sessionId: string) => {
     const updatedSessions = chatSessions.filter(s => s.id !== sessionId);
     setChatSessions(updatedSessions);
-    saveSessions(updatedSessions);
+    // Auto-save will be handled by useEffect
     
     if (sessionId === currentSessionId) {
       if (updatedSessions.length > 0) {
@@ -260,7 +340,7 @@ export default function ChatPage() {
   };
 
   const handleApiSettingChange = (modelKey: string, value: string) => {
-    // 只更新临时设置，不立即保存
+    // Only update temporary settings, don't save immediately
     setTempApiSettings(prev => ({
       ...prev,
       [modelKey]: value
@@ -268,7 +348,7 @@ export default function ChatPage() {
   };
 
   const handleSaveSettings = () => {
-    // 保存设置并关闭对话框
+    // Save settings and close dialog
     const success = saveApiSettings(tempApiSettings);
     if (success) {
       setSettingsOpen(false);
@@ -278,20 +358,20 @@ export default function ChatPage() {
   };
 
   const handleCancelSettings = () => {
-    // 恢复到原始设置，撤销未保存的更改
+    // Restore to original settings, undo unsaved changes
     setTempApiSettings(apiSettings);
     setSettingsOpen(false);
   };
 
   const handleOpenSettings = () => {
-    // 打开设置时，将当前设置复制到临时设置
+    // Copy current settings to temporary settings when opening settings
     setTempApiSettings(apiSettings);
     setSettingsOpen(true);
   };
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Left Sidebar - 增加宽度以确保完整显示，并添加响应式设计 */}
+              {/* Left Sidebar - Increased width for full display and added responsive design */}
       <div className="w-96 lg:w-96 md:w-80 sm:w-72 bg-white border-r flex flex-col">
         {/* Header */}
         <div className="p-4 border-b">
@@ -315,10 +395,10 @@ export default function ChatPage() {
                   </DialogDescription>
                 </DialogHeader>
                 
-                {/* 滚动区域 */}
+                {/* Scrollable area */}
                 <div className="flex-1 api-scroll-area space-y-6 mt-6 pr-2">
                   {Object.entries(API_CONFIGS).map(([key, config]) => {
-                    // 为每个模型定义API申请链接
+                    // Define API application links for each model
                     const getApiLink = (modelKey: string) => {
                       switch (modelKey) {
                         case 'openai':
@@ -348,7 +428,7 @@ export default function ChatPage() {
                             rel="noopener noreferrer"
                             className="econai-api-link text-sm text-blue-600 hover:text-blue-800 font-medium"
                           >
-                            获取API密钥 →
+                            Get API Key →
                           </a>
                         </div>
                         <Input
@@ -362,7 +442,7 @@ export default function ChatPage() {
                         {tempApiSettings[key] && (
                           <div className="flex items-center text-xs text-green-600">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            API密钥已配置
+                            API Key Configured
                           </div>
                         )}
                       </div>
@@ -370,20 +450,20 @@ export default function ChatPage() {
                   })}
                 </div>
 
-                {/* 固定在底部的按钮区域 */}
+                                  {/* Fixed button area at bottom */}
                 <div className="flex-shrink-0 flex justify-end space-x-3 mt-6 pt-6 border-t econai-dialog-footer">
                   <Button variant="outline" onClick={handleCancelSettings}>
-                    取消
+                    Cancel
                   </Button>
                   <Button onClick={handleSaveSettings} className="econai-button-primary">
-                    保存设置
+                                          Save Settings
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
           
-          {/* Model Selection - 改为单列布局以确保完整显示 */}
+          {/* Model Selection - Changed to single column layout for full display */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-slate-900">EconAI</h3>
@@ -650,48 +730,26 @@ export default function ChatPage() {
 
         {/* Input Area */}
         <div className="econai-chat-input-container p-6">
-          <div className="flex space-x-4">
-            <div className="flex-1 relative">
-              <Textarea
-                placeholder="Ask your economics questions here..."
-                value={currentMessage}
-                onChange={(e) => setCurrentMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                rows={3}
-                className="w-full resize-none econai-chat-input pr-16 text-base"
-              />
-              {/* Inline Send Button */}
-              <Button 
-                onClick={handleSendMessage}
-                disabled={isLoading || !currentMessage.trim()}
-                className="econai-inline-send absolute bottom-2 right-2 h-8 w-12 econai-button-primary"
-                size="sm"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            
-            {/* Main Send Button */}
+          <div className="relative">
+            <Textarea
+              placeholder="Ask your economics questions here..."
+              value={currentMessage}
+              onChange={(e) => setCurrentMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              rows={3}
+              className="w-full resize-none econai-chat-input pr-16 text-base"
+            />
+            {/* Inline Send Button */}
             <Button 
               onClick={handleSendMessage}
               disabled={isLoading || !currentMessage.trim()}
-              className="econai-send-button econai-button-primary px-8 py-4 h-auto font-medium text-base min-w-[120px]"
-              size="default"
+              className="econai-inline-send absolute bottom-2 right-2 h-8 w-12 econai-button-primary"
+              size="sm"
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  <span>Sending</span>
-                </>
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <>
-                  <Send className="h-5 w-5 mr-2" />
-                  <span>Send</span>
-                </>
+                <Send className="h-4 w-4" />
               )}
             </Button>
           </div>
