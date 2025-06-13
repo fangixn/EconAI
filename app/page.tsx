@@ -992,11 +992,22 @@ Suggested Solutions:
 
   // Process uploaded file content
   const processFileContent = async (fileId: string) => {
+    console.log('🔄 processFileContent called for fileId:', fileId);
     const file = uploadedFiles.find(f => f.id === fileId);
-    if (!file || !file.file) return;
+    console.log('📄 Found file:', file?.name, 'hasFile:', !!file?.file);
+    if (!file || !file.file) {
+      console.log('❌ No file found or file.file is missing');
+      return;
+    }
 
     try {
+      console.log('🚀 Starting readFileContent for:', file.name);
       const { content, integrity } = await readFileContent(file.file);
+      console.log('📖 readFileContent returned:', {
+        contentLength: content?.length || 0,
+        integrityMethod: integrity?.extractionMethod,
+        hasContent: !!content
+      });
       
       // Enhanced content validation with integrity consideration
       const isExtractionSuccessful = content && 
@@ -1055,7 +1066,11 @@ Suggested Solutions:
         await processDocumentsIntoChunks(completedFiles);
       }
     } catch (error) {
-      console.error('Failed to read file content:', error);
+      console.error('❌ Failed to read file content:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       
       const errorMessage = `[File processing error: ${file.name}]\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nContent integrity status: Processing failed\n\nSuggestions:\n1. Ensure file is not corrupted\n2. Try saving document as .txt format\n3. Or copy document content and paste manually`;
       
