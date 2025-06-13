@@ -103,10 +103,10 @@ export default function Home() {
 
   const aiModels = [
     { id: 'openai', name: 'ChatGPT', color: 'bg-green-500', description: 'OpenAI GPT-3.5' },
-    { id: 'deepseek', name: 'DeepSeek', color: 'bg-blue-500', description: '深度求索AI模型' },
+    { id: 'deepseek', name: 'DeepSeek', color: 'bg-blue-500', description: 'DeepSeek AI Model' },
     { id: 'gemini', name: 'Gemini', color: 'bg-purple-500', description: 'Google Gemini' },
     { id: 'claude', name: 'Claude', color: 'bg-orange-500', description: 'Anthropic Claude' },
-    { id: 'qwen', name: 'Qwen', color: 'bg-red-500', description: '阿里云通义千问' }
+    { id: 'qwen', name: 'Qwen', color: 'bg-red-500', description: 'Alibaba Cloud Qwen' }
   ];
 
   // Load saved API configurations on mount
@@ -269,8 +269,11 @@ export default function Home() {
     setIsVectorizing(true);
     const allChunks: DocumentChunk[] = [];
     
+    console.log(`📚 Starting vectorization for ${files.length} files`);
+    
     for (const file of files) {
       if (file.content && file.status === 'completed') {
+        console.log(`🔄 Chunking document: ${file.name} (${file.content.length} characters)`);
         const chunks = chunkDocument(file.content, file.name);
         
         // Add embeddings to chunks
@@ -279,13 +282,27 @@ export default function Home() {
         });
         
         allChunks.push(...chunks);
+        console.log(`✅ Created ${chunks.length} chunks for ${file.name}`);
+      } else {
+        console.log(`⚠️ Skipping file ${file.name}: status=${file.status}, hasContent=${!!file.content}`);
       }
     }
     
     setDocumentChunks(allChunks);
     setIsVectorizing(false);
     
-    console.log(`📚 Vectorization complete: Processed ${allChunks.length} document chunks`);
+    console.log(`📚 Vectorization complete: Processed ${allChunks.length} document chunks from ${files.filter(f => f.content && f.status === 'completed').length} files`);
+  };
+
+  // Manual re-process all uploaded documents
+  const reprocessAllDocuments = async () => {
+    const completedFiles = uploadedFiles.filter(f => f.status === 'completed' && f.content);
+    if (completedFiles.length > 0) {
+      console.log(`🔄 Manually reprocessing ${completedFiles.length} documents`);
+      await processDocumentsIntoChunks(completedFiles);
+    } else {
+      console.log('⚠️ No completed documents found to reprocess');
+    }
   };
 
   // Real AI API call function with enhanced support and RAG
@@ -371,7 +388,7 @@ Now, let me address your question based on general economics knowledge:`;
     try {
       console.log(`🚀 Calling ${config.name} API...`);
       
-      // 超时控制
+      // Timeout control
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), config.timeout || PERFORMANCE_SETTINGS.DEFAULT_TIMEOUT);
 
@@ -392,37 +409,37 @@ Now, let me address your question based on general economics knowledge:`;
         const errorText = await response.text();
         console.error(`❌ ${config.name} API Error:`, response.status, errorText);
         
-        // 详细的错误处理
+        // Detailed error handling
         if (response.status === 401 || response.status === 403) {
-          throw new Error(`API密钥无效或权限不足（${config.name}）`);
+          throw new Error(`Invalid API key or insufficient permissions (${config.name})`);
         } else if (response.status === 429) {
-          throw new Error(`API请求频率过高（${config.name}），请稍后重试`);
+          throw new Error(`API request rate limit exceeded (${config.name}), please try again later`);
         } else if (response.status >= 500) {
-          throw new Error(`${config.name} 服务器暂时不可用，请稍后重试`);
+          throw new Error(`${config.name} server temporarily unavailable, please try again later`);
         } else {
-          throw new Error(`${config.name} API错误: ${response.status} - ${errorText.substring(0, 200)}`);
+          throw new Error(`${config.name} API error: ${response.status} - ${errorText.substring(0, 200)}`);
         }
       }
 
       const data = await response.json();
       const result = config.parseResponse(data);
       
-      console.log(`✅ ${config.name} API调用成功`);
+      console.log(`✅ ${config.name} API call successful`);
       return result;
       
     } catch (error) {
-      console.error(`❌ ${config.name} API调用失败:`, error);
+      console.error(`❌ ${config.name} API call failed:`, error);
       
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          throw new Error(`${config.name} API请求超时，请稍后重试`);
+          throw new Error(`${config.name} API request timeout, please try again later`);
         } else if (error.message.includes('fetch')) {
-          throw new Error(`网络连接错误，请检查网络设置`);
+          throw new Error(`Network connection error, please check your network settings`);
         } else {
           throw error;
         }
       } else {
-        throw new Error(`${config.name} API调用失败: 未知错误`);
+        throw new Error(`${config.name} API call failed: Unknown error`);
       }
     }
   };
@@ -436,9 +453,9 @@ Now, let me address your question based on general economics knowledge:`;
         "Let's start by analyzing the fundamental principles of microeconomics..."
       ],
       deepseek: [
-        "基于深度学习经济模型分析，我认为...",
-        "通过大数据分析和机器学习算法，我们可以看到...",
-        "从AI角度来理解这个经济现象..."
+        "Based on deep learning economic model analysis, I believe...",
+        "Through big data analysis and machine learning algorithms, we can see...",
+        "From an AI perspective, understanding this economic phenomenon..."
       ],
       gemini: [
         "This economic concept can be understood from multiple dimensions...",
@@ -451,9 +468,9 @@ Now, let me address your question based on general economics knowledge:`;
         "I'll approach this economic problem systematically..."
       ],
       qwen: [
-        "从经济学角度来分析这个问题...",
-        "结合当前市场环境和政策背景，我的分析是...",
-        "根据经济理论和实践经验..."
+        "From an economic perspective, analyzing this problem...",
+        "Combining current market environment and policy background, my analysis is...",
+        "Based on economic theory and practical experience..."
       ]
     };
     
@@ -809,25 +826,32 @@ Regarding your question "${userMessage.substring(0, 50)}${userMessage.length > 5
           integrity
         };
       } else {
+        console.log(`⚠️ DOC file content extraction yielded insufficient readable text: ${file.name}`);
         const fallbackInfo = `[WORD DOCUMENT: ${file.name}]
+
+⚠️ Content Extraction Warning: Limited readable text found (${extractedText.length} characters)
 
 Document Information:
 - File Size: ${(file.size / 1024).toFixed(1)} KB
-- Document Type: ${file.type || 'Unknown'}
-- Extraction Method: Binary parsing
+- Document Type: ${file.type || 'application/msword'}
+- Extraction Method: Binary parsing with multi-encoding
 
-Extraction Status: Insufficient readable text content found
+Possible reasons:
+• Document contains mostly images/tables
+• Unusual encoding or format
+• Password protection
+• Corrupted file
 
-Suggested Solutions:
-1. Save document as .txt format (recommended)
-2. Copy document content and paste manually into chat
-3. Check if document is password protected
-4. Try opening with newer Word version and re-saving
+Recommended Solutions:
+1. 💾 Save as .txt format (File → Save As → Plain Text)
+2. 📋 Copy content manually and paste into chat
+3. 🔄 Try re-saving with newer Word version
+4. 📄 Convert to PDF then copy text
 
-[Integrity Info] Original Size: ${file.size} bytes, Extracted Length: ${extractedText.length} characters`;
+Note: AI will still attempt to use any extracted content (${extractedText.length} chars available)`;
         
         return {
-          content: fallbackInfo,
+          content: extractedText.length > 0 ? `${fallbackInfo}\n\n--- Extracted Content ---\n${extractedText}` : fallbackInfo,
           integrity: { ...integrity, hasLossWarning: true }
         };
       }
@@ -1077,9 +1101,17 @@ Suggested Solutions:
 
       // Auto-vectorize after successful file processing
       if (isExtractionSuccessful && vectorSearchEnabled) {
-        const completedFiles = uploadedFiles.filter(f => f.status === 'completed' && f.content);
-        completedFiles.push({ ...file, content, integrityInfo: integrity, status: 'completed' });
-        await processDocumentsIntoChunks(completedFiles);
+        // Wait for state update then vectorize
+        setTimeout(async () => {
+          const allFiles = uploadedFiles.map(f => 
+            f.id === fileId 
+              ? { ...f, content, integrityInfo: integrity, status: 'completed' as const }
+              : f
+          );
+          const completedFiles = allFiles.filter(f => f.status === 'completed' && f.content);
+          console.log(`🔄 Auto-vectorizing ${completedFiles.length} completed files including ${file?.name}`);
+          await processDocumentsIntoChunks(completedFiles);
+        }, 500);
       }
     } catch (error) {
       console.error('❌ Failed to read file content:', error);
@@ -1361,15 +1393,15 @@ Suggested Solutions:
                       <span>API Settings</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
+                  <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+                    <DialogHeader className="flex-shrink-0">
                       <DialogTitle className="flex items-center space-x-2">
                         <Key className="h-5 w-5" />
                         <span>AI API Configuration</span>
                       </DialogTitle>
                     </DialogHeader>
                     
-                    <div className="space-y-6">
+                    <div className="space-y-6 overflow-y-auto flex-1 pr-2 py-4">
                       <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
                         <h4 className="font-medium text-blue-900 mb-2">Getting Started</h4>
                         <p className="text-sm text-blue-800">
@@ -1476,7 +1508,7 @@ Suggested Solutions:
                         
                         <div>
                           <Label htmlFor="qwen-key" className="flex items-center space-x-2 mb-2">
-                            <span>阿里云API Key (for Qwen)</span>
+                            <span>Alibaba Cloud API Key (for Qwen)</span>
                             <a 
                               href="https://dashscope.console.aliyun.com/apiKey" 
                               target="_blank" 
@@ -1499,13 +1531,13 @@ Suggested Solutions:
                         </div>
                         
                         <div className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400">
-                          <h4 className="font-medium text-yellow-900 mb-2">重要提示</h4>
+                          <h4 className="font-medium text-yellow-900 mb-2">Important Notes</h4>
                           <ul className="text-sm text-yellow-800 space-y-1">
-                            <li>• API密钥仅存储在本地浏览器中，不会上传到我们的服务器</li>
-                            <li>• 使用API会产生费用，由相应的AI服务提供商收取</li>
-                            <li>• 请妥善保管您的API密钥，切勿分享给他人</li>
-                            <li>• 支持OpenAI、DeepSeek、Google、Anthropic、阿里云等多个服务商</li>
-                            <li>• 没有配置API密钥时，系统将使用模拟响应</li>
+                            <li>• API keys are stored locally in your browser and never uploaded to our servers</li>
+                            <li>• Using APIs will incur charges from the respective AI service providers</li>
+                            <li>• Please keep your API keys secure and never share them with others</li>
+                            <li>• Supports multiple providers: OpenAI, DeepSeek, Google, Anthropic, Alibaba Cloud</li>
+                            <li>• Without configured API keys, the system will use simulated responses</li>
                           </ul>
                         </div>
                         
@@ -1538,9 +1570,10 @@ Suggested Solutions:
                             </div>
                           )}
                         </div>
+                                              </div>
                       </div>
                       
-                      <div className="flex justify-end space-x-3 pt-4">
+                      <div className="flex justify-end space-x-3 pt-4 border-t bg-background flex-shrink-0">
                         <Button 
                           variant="outline" 
                           onClick={() => setIsSettingsOpen(false)}
@@ -1555,7 +1588,6 @@ Suggested Solutions:
                           <span>Save Configuration</span>
                         </Button>
                       </div>
-                    </div>
                   </DialogContent>
                 </Dialog>
               </div>
@@ -1711,11 +1743,11 @@ Suggested Solutions:
                           {apiSettings.enabled ? 'Real AI Enabled' : 'Demo Mode (Configure API keys for real AI)'}
                         </span>
                       </div>
-                      {documentChunks.length > 0 && (
+                      {uploadedFiles.filter(f => f.status === 'completed' && f.content).length > 0 && (
                         <div className="flex items-center space-x-2">
-                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                          <span className="text-blue-600">
-                            📚 Vector DB: {documentChunks.length} chunks ready for RAG search
+                          <div className={`w-2 h-2 rounded-full ${documentChunks.length > 0 ? 'bg-blue-500' : 'bg-orange-500'}`}></div>
+                          <span className={documentChunks.length > 0 ? 'text-blue-600' : 'text-orange-600'}>
+                            📚 Documents: {uploadedFiles.filter(f => f.status === 'completed' && f.content).length} uploaded, {documentChunks.length} chunks vectorized
                           </span>
                         </div>
                       )}
@@ -1725,6 +1757,16 @@ Suggested Solutions:
                           <span className="text-orange-600">
                             🔄 Vectorizing documents...
                           </span>
+                        </div>
+                      )}
+                      {uploadedFiles.filter(f => f.status === 'completed' && f.content).length > 0 && documentChunks.length === 0 && !isVectorizing && (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={reprocessAllDocuments}
+                            className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-2 py-1 rounded border border-blue-200"
+                          >
+                            🔄 Re-vectorize Documents
+                          </button>
                         </div>
                       )}
                     </div>
@@ -1772,7 +1814,23 @@ Suggested Solutions:
                     {/* Display uploaded files */}
                     {uploadedFiles.length > 0 && (
                       <div className="mt-4 space-y-2">
-                        <p className="text-sm font-medium text-gray-700">Uploaded Files:</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-gray-700">Uploaded Files:</p>
+                          <div className="flex items-center space-x-2">
+                            {uploadedFiles.filter(f => f.status === 'completed' && f.content).length > 0 && (
+                              <button
+                                onClick={reprocessAllDocuments}
+                                disabled={isVectorizing}
+                                className="text-xs bg-blue-50 hover:bg-blue-100 disabled:bg-gray-50 text-blue-600 disabled:text-gray-400 px-2 py-1 rounded border border-blue-200 disabled:border-gray-200"
+                              >
+                                {isVectorizing ? '🔄 Processing...' : '🔄 Re-vectorize All'}
+                              </button>
+                            )}
+                            <span className="text-xs text-gray-500">
+                              {uploadedFiles.filter(f => f.status === 'completed' && f.content).length}/{uploadedFiles.length} ready
+                            </span>
+                          </div>
+                        </div>
                         <div className="space-y-3">
                           {uploadedFiles.map((file) => (
                             <div key={file.id} className="p-3 bg-white border rounded-lg">

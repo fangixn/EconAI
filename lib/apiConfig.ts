@@ -148,16 +148,16 @@ export const API_CONFIGS: Record<string, ApiConfig> = {
 
 export const AVAILABLE_MODELS = [
   { id: 'openai', name: 'ChatGPT', description: 'OpenAI GPT-3.5', color: 'bg-green-500' },
-  { id: 'deepseek', name: 'DeepSeek', description: '深度求索AI模型', color: 'bg-blue-500' },
+  { id: 'deepseek', name: 'DeepSeek', description: 'DeepSeek AI Model', color: 'bg-blue-500' },
   { id: 'gemini', name: 'Gemini', description: 'Google Gemini', color: 'bg-purple-500' },
   { id: 'claude', name: 'Claude', description: 'Anthropic Claude', color: 'bg-orange-500' },
-  { id: 'qwen', name: 'Qwen', description: '阿里云通义千问', color: 'bg-red-500' }
+  { id: 'qwen', name: 'Qwen', description: 'Alibaba Cloud Qwen', color: 'bg-red-500' }
 ];
 
-// API优先级配置（用于智能分析功能）
+// API priority configuration (for intelligent analysis functionality)
 export const ANALYSIS_API_PRIORITY = ['openai', 'claude', 'gemini', 'deepseek', 'qwen'];
 
-// 性能设置
+// Performance settings
 export const PERFORMANCE_SETTINGS = {
   DEFAULT_TIMEOUT: 30000,
   ANALYSIS_TIMEOUT: 45000,
