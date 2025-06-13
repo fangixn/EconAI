@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { 
   Brain, 
   Upload, 
@@ -37,6 +38,8 @@ interface UploadedFile {
   name: string;
   size: number;
   type: string;
+  status: 'uploading' | 'completed' | 'error';
+  progress: number;
 }
 
 export default function Home() {
@@ -56,30 +59,30 @@ export default function Home() {
     { id: 'gemini', name: 'Gemini', color: 'bg-purple-500' }
   ];
 
-  // 模拟AI回复函数
+  // Simulate AI response function
   const simulateAIResponse = (userMessage: string, model: string): string => {
     const responses = {
       chatgpt: [
-        "这是一个非常有趣的经济学问题。根据现代经济理论...",
-        "从宏观经济学的角度来看，这个问题涉及到多个方面...",
-        "让我们从微观经济学的基础原理开始分析..."
+        "This is a fascinating economics question. According to modern economic theory...",
+        "From a macroeconomic perspective, this issue involves multiple aspects...",
+        "Let's start by analyzing the fundamental principles of microeconomics..."
       ],
       deepseek: [
-        "基于深度学习的经济模型分析，我认为...",
-        "通过大数据分析和机器学习算法，我们可以看到...",
-        "从AI的角度来理解这个经济现象..."
+        "Based on deep learning economic model analysis, I believe...",
+        "Through big data analysis and machine learning algorithms, we can see...",
+        "From an AI perspective, understanding this economic phenomenon..."
       ],
       gemini: [
-        "这个经济学概念可以从多个维度来理解...",
-        "结合历史数据和当前市场趋势，我的分析是...",
-        "从全球经济一体化的视角来看..."
+        "This economic concept can be understood from multiple dimensions...",
+        "Combining historical data and current market trends, my analysis is...",
+        "From the perspective of global economic integration..."
       ]
     };
     
     const modelResponses = responses[model as keyof typeof responses];
     const randomResponse = modelResponses[Math.floor(Math.random() * modelResponses.length)];
     
-    return `${randomResponse} 您问的关于"${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}"是一个很好的问题。在经济学中，这涉及到供需关系、市场效率、消费者行为等多个方面。让我为您详细解释...`;
+    return `${randomResponse} Your question about "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}" is an excellent inquiry. In economics, this involves supply and demand relationships, market efficiency, consumer behavior, and many other aspects. Let me explain in detail...`;
   };
 
   // 处理发送消息
@@ -112,26 +115,61 @@ export default function Home() {
     }, 1500 + Math.random() * 1000);
   };
 
-  // 处理示例问题点击
+  // Handle example question click
   const handleExampleClick = (exampleText: string) => {
     setMessage(exampleText);
   };
 
-  // 处理文件上传
+  // Handle file upload with progress
   const handleFileUpload = (files: FileList) => {
     Array.from(files).forEach(file => {
       const uploadedFile: UploadedFile = {
         id: Date.now().toString() + Math.random().toString(),
         name: file.name,
         size: file.size,
-        type: file.type
+        type: file.type,
+        status: 'uploading',
+        progress: 0
       };
       
       setUploadedFiles(prev => [...prev, uploadedFile]);
+      
+      // Simulate upload progress
+      simulateUploadProgress(uploadedFile.id);
     });
   };
 
-  // 处理拖拽
+  // Simulate upload progress
+  const simulateUploadProgress = (fileId: string) => {
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 15 + 5; // Random progress between 5-20%
+      
+      setUploadedFiles(prev => 
+        prev.map(file => 
+          file.id === fileId 
+            ? { ...file, progress: Math.min(progress, 100) }
+            : file
+        )
+      );
+      
+      if (progress >= 100) {
+        clearInterval(interval);
+        // Mark as completed after a short delay
+        setTimeout(() => {
+          setUploadedFiles(prev => 
+            prev.map(file => 
+              file.id === fileId 
+                ? { ...file, status: 'completed', progress: 100 }
+                : file
+            )
+          );
+        }, 300);
+      }
+    }, 200 + Math.random() * 300); // Random interval between 200-500ms
+  };
+
+  // Handle drag and drop
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -151,12 +189,12 @@ export default function Home() {
     }
   };
 
-  // 处理文件选择
+  // Handle file selection
   const handleFileSelect = () => {
     fileInputRef.current?.click();
   };
 
-  // 格式化文件大小
+  // Format file size
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -225,7 +263,7 @@ export default function Home() {
                   document.getElementById('chat')?.scrollIntoView({ behavior: 'smooth' });
                 }}
               >
-                开始使用
+                Get Started
               </Button>
             </nav>
 
@@ -253,7 +291,7 @@ export default function Home() {
                   document.getElementById('chat')?.scrollIntoView({ behavior: 'smooth' });
                 }}
               >
-                开始使用
+                Get Started
               </Button>
             </div>
           </div>
@@ -287,7 +325,7 @@ export default function Home() {
                   document.getElementById('chat')?.scrollIntoView({ behavior: 'smooth' });
                 }}
               >
-                开始探索
+                Start Exploring
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button 
@@ -300,7 +338,7 @@ export default function Home() {
                 }}
               >
                 <FileText className="mr-2 h-5 w-5" />
-                上传文档
+                Upload Documents
               </Button>
             </div>
           </div>
@@ -401,7 +439,7 @@ export default function Home() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
-                {/* 聊天消息显示区域 */}
+                {/* Chat messages display area */}
                 {chatMessages.length > 0 && (
                   <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto space-y-3 mb-4">
                     {chatMessages.map((msg) => (
@@ -450,30 +488,30 @@ export default function Home() {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 mb-2">Example questions:</p>
                   <div className="flex flex-wrap gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-blue-600 hover:bg-blue-50"
-                      onClick={() => handleExampleClick("卡纳曼的核心见解是什么？")}
-                    >
-                      卡纳曼的核心见解是什么？
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-blue-600 hover:bg-blue-50"
-                      onClick={() => handleExampleClick("解释行为经济学")}
-                    >
-                      解释行为经济学
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-blue-600 hover:bg-blue-50"
-                      onClick={() => handleExampleClick("市场效率理论")}
-                    >
-                      市场效率理论
-                    </Button>
+                                         <Button 
+                       variant="ghost" 
+                       size="sm" 
+                       className="text-blue-600 hover:bg-blue-50"
+                       onClick={() => handleExampleClick("What are Kahneman's core insights?")}
+                     >
+                       What are Kahneman's core insights?
+                     </Button>
+                     <Button 
+                       variant="ghost" 
+                       size="sm" 
+                       className="text-blue-600 hover:bg-blue-50"
+                       onClick={() => handleExampleClick("Explain behavioral economics")}
+                     >
+                       Explain behavioral economics
+                     </Button>
+                     <Button 
+                       variant="ghost" 
+                       size="sm" 
+                       className="text-blue-600 hover:bg-blue-50"
+                       onClick={() => handleExampleClick("Market efficiency theory")}
+                     >
+                       Market efficiency theory
+                     </Button>
                   </div>
                 </div>
                 
@@ -504,7 +542,7 @@ export default function Home() {
                       disabled={!message.trim() || isLoading}
                       onClick={handleSendMessage}
                     >
-                      {isLoading ? '发送中...' : 'Ask AI'}
+                      {isLoading ? 'Sending...' : 'Ask AI'}
                       <Send className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
@@ -529,11 +567,11 @@ export default function Home() {
                         <p className={`mb-2 ${
                           isDragOver ? 'text-blue-600' : 'text-gray-600'
                         }`}>
-                          {isDragOver ? '松开鼠标上传文件' : '拖拽经济学文档到这里'}
+                          {isDragOver ? 'Release to upload files' : 'Drop your economics documents here'}
                         </p>
-                        <p className="text-sm text-gray-500 mb-4">支持 PDF, DOCX, TXT 文件</p>
+                        <p className="text-sm text-gray-500 mb-4">Supports PDF, DOCX, TXT files</p>
                         <Button variant="outline" onClick={handleFileSelect}>
-                          浏览文件
+                          Browse Files
                         </Button>
                         <input
                           ref={fileInputRef}
@@ -546,27 +584,43 @@ export default function Home() {
                       </CardContent>
                     </Card>
                     
-                    {/* 显示已上传的文件 */}
+                    {/* Display uploaded files */}
                     {uploadedFiles.length > 0 && (
                       <div className="mt-4 space-y-2">
-                        <p className="text-sm font-medium text-gray-700">已上传文件:</p>
-                        <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">Uploaded Files:</p>
+                        <div className="space-y-3">
                           {uploadedFiles.map((file) => (
-                            <div key={file.id} className="flex items-center justify-between p-2 bg-white border rounded-lg">
-                              <div className="flex items-center space-x-2">
-                                <FileText className="h-4 w-4 text-blue-600" />
-                                <div>
-                                  <p className="text-sm font-medium">{file.name}</p>
-                                  <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                            <div key={file.id} className="p-3 bg-white border rounded-lg">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center space-x-2">
+                                  <FileText className="h-4 w-4 text-blue-600" />
+                                  <div>
+                                    <p className="text-sm font-medium">{file.name}</p>
+                                    <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  {file.status === 'completed' && (
+                                    <CheckCircle className="h-4 w-4 text-green-600" />
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setUploadedFiles(prev => prev.filter(f => f.id !== file.id))}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setUploadedFiles(prev => prev.filter(f => f.id !== file.id))}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                              {file.status === 'uploading' && (
+                                <div className="space-y-1">
+                                  <div className="flex justify-between text-xs text-gray-600">
+                                    <span>Uploading...</span>
+                                    <span>{Math.round(file.progress)}%</span>
+                                  </div>
+                                  <Progress value={file.progress} className="h-2" />
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
