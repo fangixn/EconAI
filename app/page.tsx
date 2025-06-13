@@ -605,7 +605,17 @@ Regarding your question "${userMessage.substring(0, 50)}${userMessage.length > 5
             )
           );
           // Read file content after completion
-          processFileContent(fileId);
+          // Get the file from the current files array
+          setUploadedFiles(prev => {
+            const targetFile = prev.find(f => f.id === fileId);
+            if (targetFile?.file) {
+              console.log('🎯 Found file for processing:', targetFile.name);
+              processFileContent(fileId, targetFile.file);
+            } else {
+              console.error('❌ File not found in state when trying to process content');
+            }
+            return prev;
+          });
         }, 300);
       }
     }, 200 + Math.random() * 300); // Random interval between 200-500ms
@@ -991,18 +1001,31 @@ Suggested Solutions:
   };
 
   // Process uploaded file content
-  const processFileContent = async (fileId: string) => {
+  const processFileContent = async (fileId: string, fileObject?: File) => {
     console.log('🔄 processFileContent called for fileId:', fileId);
-    const file = uploadedFiles.find(f => f.id === fileId);
-    console.log('📄 Found file:', file?.name, 'hasFile:', !!file?.file);
-    if (!file || !file.file) {
-      console.log('❌ No file found or file.file is missing');
+    
+    // Try to use passed file object first, then fallback to state lookup
+    let file: UploadedFile | undefined;
+    let targetFile: File | undefined;
+    
+    if (fileObject) {
+      console.log('📁 Using passed file object:', fileObject.name);
+      file = uploadedFiles.find(f => f.id === fileId);
+      targetFile = fileObject;
+    } else {
+      file = uploadedFiles.find(f => f.id === fileId);
+      targetFile = file?.file;
+    }
+    
+    console.log('📄 Found file:', file?.name, 'hasFile:', !!targetFile);
+    if (!file || !targetFile) {
+      console.log('❌ No file found or file object is missing');
       return;
     }
 
     try {
       console.log('🚀 Starting readFileContent for:', file.name);
-      const { content, integrity } = await readFileContent(file.file);
+      const { content, integrity } = await readFileContent(targetFile);
       console.log('📖 readFileContent returned:', {
         contentLength: content?.length || 0,
         integrityMethod: integrity?.extractionMethod,
@@ -1075,7 +1098,7 @@ Suggested Solutions:
       const errorMessage = `[File processing error: ${file.name}]\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nContent integrity status: Processing failed\n\nSuggestions:\n1. Ensure file is not corrupted\n2. Try saving document as .txt format\n3. Or copy document content and paste manually`;
       
       const errorIntegrity: ContentIntegrityInfo = {
-        originalSize: file.file?.size || 0,
+        originalSize: targetFile?.size || 0,
         extractedSize: 0,
         compressionRatio: 0,
         hasLossWarning: true,
