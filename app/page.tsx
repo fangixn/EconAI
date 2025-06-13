@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { 
   Brain, 
   Upload, 
@@ -21,7 +23,10 @@ import {
   Sparkles,
   Send,
   Bot,
-  User
+  User,
+  Settings,
+  Key,
+  Save
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -41,6 +46,17 @@ interface UploadedFile {
   progress: number;
 }
 
+interface ApiConfig {
+  openai?: string;
+  anthropic?: string;
+  google?: string;
+}
+
+interface ApiSettings {
+  enabled: boolean;
+  configs: ApiConfig;
+}
+
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState('chatgpt');
@@ -51,12 +67,117 @@ export default function Home() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [apiSettings, setApiSettings] = useState<ApiSettings>({
+    enabled: false,
+    configs: {}
+  });
+  const [tempApiConfigs, setTempApiConfigs] = useState<ApiConfig>({});
 
   const aiModels = [
     { id: 'chatgpt', name: 'ChatGPT', color: 'bg-green-500' },
     { id: 'deepseek', name: 'DeepSeek', color: 'bg-blue-500' },
     { id: 'gemini', name: 'Gemini', color: 'bg-purple-500' }
   ];
+
+  // Load saved API configurations on mount
+  useEffect(() => {
+    const savedConfigs = localStorage.getItem('econ-ai-api-configs');
+    if (savedConfigs) {
+      try {
+        const configs = JSON.parse(savedConfigs);
+        setApiSettings({
+          enabled: Object.keys(configs).length > 0,
+          configs
+        });
+      } catch (error) {
+        console.error('Failed to load API configs:', error);
+      }
+    }
+  }, []);
+
+  // Save API configurations
+  const saveApiConfigs = () => {
+    const cleanConfigs = Object.fromEntries(
+      Object.entries(tempApiConfigs).filter(([_, value]) => value && value.trim())
+    );
+    
+    localStorage.setItem('econ-ai-api-configs', JSON.stringify(cleanConfigs));
+    setApiSettings({
+      enabled: Object.keys(cleanConfigs).length > 0,
+      configs: cleanConfigs
+    });
+    setIsSettingsOpen(false);
+  };
+
+  // Real AI API call function
+  const callRealAI = async (message: string, model: string): Promise<string> => {
+    const { configs } = apiSettings;
+    
+    try {
+      if (model === 'chatgpt' && configs.openai) {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${configs.openai}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are an economics expert. Provide detailed, accurate responses about economic theories, concepts, and analysis.'
+              },
+              {
+                role: 'user',
+                content: message
+              }
+            ],
+            max_tokens: 1000,
+            temperature: 0.7,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`OpenAI API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0]?.message?.content || 'No response received';
+      }
+      
+      if (model === 'gemini' && configs.google) {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${configs.google}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `As an economics expert, please provide a detailed response to: ${message}`
+              }]
+            }]
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Gemini API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response received';
+      }
+
+      // Fallback for other models or missing API keys
+      throw new Error('API key not configured for selected model');
+      
+    } catch (error) {
+      console.error('AI API call failed:', error);
+      throw error;
+    }
+  };
 
   // Simulate AI response function
   const simulateAIResponse = (userMessage: string, model: string): string => {
@@ -84,7 +205,7 @@ export default function Home() {
     return `${randomResponse} Your question about "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}" is an excellent inquiry. In economics, this involves supply and demand relationships, market efficiency, consumer behavior, and many other aspects. Let me explain in detail...`;
   };
 
-  // 处理发送消息
+  // Handle sending messages
   const handleSendMessage = async () => {
     if (!message.trim()) return;
     
@@ -96,22 +217,46 @@ export default function Home() {
     };
     
     setChatMessages(prev => [...prev, userMessage]);
+    const currentMessage = message;
     setMessage('');
     setIsLoading(true);
     
-    // 模拟AI响应延迟
-    setTimeout(() => {
+    try {
+      let responseContent: string;
+      
+      // Use real AI if API is configured
+      if (apiSettings.enabled) {
+        responseContent = await callRealAI(currentMessage, selectedModel);
+      } else {
+        // Fallback to simulation
+        await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+        responseContent = simulateAIResponse(currentMessage, selectedModel);
+      }
+      
       const aiResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: simulateAIResponse(message, selectedModel),
+        content: responseContent,
         sender: 'ai',
         model: selectedModel,
         timestamp: new Date()
       };
       
       setChatMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Failed to get AI response:', error);
+      
+      const errorResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your API configuration in settings.`,
+        sender: 'ai',
+        model: selectedModel,
+        timestamp: new Date()
+      };
+      
+      setChatMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsLoading(false);
-    }, 1500 + Math.random() * 1000);
+    }
   };
 
   // Handle example question click
@@ -422,18 +567,130 @@ export default function Home() {
 
           <Card className="shadow-2xl border-0">
             <CardHeader className="border-b bg-gray-50">
-              <div className="flex flex-wrap gap-2 justify-center">
-                {aiModels.map((model) => (
-                  <Button
-                    key={model.id}
-                    variant={selectedModel === model.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedModel(model.id)}
-                    className={selectedModel === model.id ? `${model.color} text-white hover:opacity-90` : ''}
-                  >
-                    {model.name}
-                  </Button>
-                ))}
+              <div className="flex items-center justify-between">
+                <div className="flex flex-wrap gap-2">
+                  {aiModels.map((model) => (
+                    <Button
+                      key={model.id}
+                      variant={selectedModel === model.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedModel(model.id)}
+                      className={selectedModel === model.id ? `${model.color} text-white hover:opacity-90` : ''}
+                    >
+                      {model.name}
+                    </Button>
+                  ))}
+                </div>
+                
+                <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="flex items-center space-x-2"
+                      onClick={() => {
+                        setTempApiConfigs(apiSettings.configs);
+                        setIsSettingsOpen(true);
+                      }}
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>API Settings</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center space-x-2">
+                        <Key className="h-5 w-5" />
+                        <span>AI API Configuration</span>
+                      </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-6">
+                      <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
+                        <h4 className="font-medium text-blue-900 mb-2">Getting Started</h4>
+                        <p className="text-sm text-blue-800">
+                          Configure your AI API keys to enable real AI conversations. Your keys are stored locally and never sent to our servers.
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="openai-key" className="flex items-center space-x-2 mb-2">
+                            <span>OpenAI API Key (for ChatGPT)</span>
+                            <a 
+                              href="https://platform.openai.com/api-keys" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              Get Key
+                            </a>
+                          </Label>
+                          <Input
+                            id="openai-key"
+                            type="password"
+                            placeholder="sk-..."
+                            value={tempApiConfigs.openai || ''}
+                            onChange={(e) => setTempApiConfigs(prev => ({
+                              ...prev,
+                              openai: e.target.value
+                            }))}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="google-key" className="flex items-center space-x-2 mb-2">
+                            <span>Google AI API Key (for Gemini)</span>
+                            <a 
+                              href="https://aistudio.google.com/app/apikey" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              Get Key
+                            </a>
+                          </Label>
+                          <Input
+                            id="google-key"
+                            type="password"
+                            placeholder="AI..."
+                            value={tempApiConfigs.google || ''}
+                            onChange={(e) => setTempApiConfigs(prev => ({
+                              ...prev,
+                              google: e.target.value
+                            }))}
+                          />
+                        </div>
+                        
+                        <div className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400">
+                          <h4 className="font-medium text-yellow-900 mb-2">Important Notes</h4>
+                          <ul className="text-sm text-yellow-800 space-y-1">
+                            <li>• API keys are stored locally in your browser</li>
+                            <li>• You will be charged by the AI service providers for usage</li>
+                            <li>• Always keep your API keys secure and never share them</li>
+                            <li>• Without API keys, the system will use simulated responses</li>
+                          </ul>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end space-x-3 pt-4">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setIsSettingsOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={saveApiConfigs}
+                          className="flex items-center space-x-2"
+                        >
+                          <Save className="h-4 w-4" />
+                          <span>Save Configuration</span>
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent className="p-6">
@@ -544,6 +801,16 @@ export default function Home() {
                       {isLoading ? 'Sending...' : 'Ask AI'}
                       <Send className="ml-2 h-4 w-4" />
                     </Button>
+                  </div>
+                  
+                  {/* API Status Indicator */}
+                  <div className="flex items-center justify-center mt-2">
+                    <div className="flex items-center space-x-2 text-xs text-gray-500">
+                      <div className={`w-2 h-2 rounded-full ${apiSettings.enabled ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                      <span>
+                        {apiSettings.enabled ? 'Real AI Enabled' : 'Demo Mode (Configure API keys for real AI)'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
