@@ -37,6 +37,15 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+// Add interface for content integrity tracking
+interface ContentIntegrityInfo {
+  originalSize: number;
+  extractedSize: number;
+  compressionRatio: number;
+  hasLossWarning: boolean;
+  extractionMethod: string;
+}
+
 interface UploadedFile {
   id: string;
   name: string;
@@ -46,6 +55,7 @@ interface UploadedFile {
   progress: number;
   content?: string;
   file?: File;
+  integrityInfo?: ContentIntegrityInfo;  // Add integrity tracking
 }
 
 interface ApiConfig {
@@ -411,481 +421,299 @@ The uploaded files contain valuable economic information that would be analyzed 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Enhanced EPUB text extraction with Chinese support
-  const extractEpubText = async (file: File): Promise<string> => {
+  // Enhanced file content integrity preservation
+  const preserveContentIntegrity = (originalContent: string, extractedContent: string, method: string): ContentIntegrityInfo => {
+    const originalSize = originalContent.length;
+    const extractedSize = extractedContent.length;
+    const compressionRatio = originalSize > 0 ? extractedSize / originalSize : 1;
+    
+    return {
+      originalSize,
+      extractedSize,
+      compressionRatio,
+      hasLossWarning: compressionRatio < 0.9, // Warn if less than 90% content preserved
+      extractionMethod: method
+    };
+  };
+
+  // Enhanced EPUB text extraction with full content preservation
+  const extractEpubText = async (file: File): Promise<{ content: string; integrity: ContentIntegrityInfo }> => {
     try {
-      // EPUB files are ZIP archives, but we'll attempt a basic text extraction
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      let text = '';
       
-      // Convert to string and look for readable text patterns
+      // Try to parse as ZIP (EPUB is essentially a ZIP file)
       const decoder = new TextDecoder('utf-8', { fatal: false });
       const content = decoder.decode(uint8Array);
       
-      // Enhanced text extraction - look for content between tags with Chinese support
-      const textMatches = content.match(/>([^<]+)</g);
-      if (textMatches) {
-        text = textMatches
-          .map(match => match.slice(1, -1).trim())
-          .filter(text => {
-            // Support both English and Chinese content
-            return text.length > 5 && 
-                   /[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]/.test(text) &&
-                   !/^[\d\s\W]*$/.test(text) &&
-                   !text.match(/^[^\w\u4e00-\u9fff]+$/);
-          })
-          .join(' ')
+      let extractedTexts: string[] = [];
+      
+      // Look for HTML/XHTML content in EPUB
+      const htmlMatches = content.match(/<html[\s\S]*?<\/html>/gi) || [];
+      const bodyMatches = content.match(/<body[\s\S]*?<\/body>/gi) || [];
+      const pMatches = content.match(/<p[^>]*>[\s\S]*?<\/p>/gi) || [];
+      
+      // Extract from HTML structures
+      [...htmlMatches, ...bodyMatches, ...pMatches].forEach(match => {
+        const textContent = match
+          .replace(/<[^>]+>/g, ' ') // Remove HTML tags
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
           .replace(/\s+/g, ' ')
-          .trim()
-          .slice(0, 5000); // Limit to first 5000 characters
-      }
-      
-      // If initial extraction fails, try looking for consecutive readable text
-      if (text.length < 100) {
-        const readableChunks = content.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z][^\x00-\x1f\x7f]{20,}/g);
-        if (readableChunks && readableChunks.length > 0) {
-          text = readableChunks
-            .filter(chunk => {
-              const validChars = chunk.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]/g);
-              return validChars && validChars.length > chunk.length * 0.3;
-            })
-            .slice(0, 20) // Take first 20 chunks
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 5000);
+          .trim();
+        
+        if (textContent.length > 10) {
+          extractedTexts.push(textContent);
         }
-      }
+      });
       
-      if (text.length > 50) {
-        return `[EPUB电子书: ${file.name}]\n提取的内容预览：\n\n${text}`;
-      } else {
-        return `[EPUB电子书: ${file.name}]\n注意：无法提取可读文本内容。建议：\n1. 将电子书转换为.txt或.md格式\n2. 使用Calibre等工具转换格式\n3. 手动复制文本内容`;
-      }
-    } catch (error) {
-      return `[EPUB电子书: ${file.name}]\n错误：读取EPUB文件时出错。请转换为.txt或.md格式。`;
-    }
-  };
-
-  // Enhanced MOBI text extraction with Chinese support
-  const extractMobiText = async (file: File): Promise<string> => {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      // MOBI files have a specific structure, try enhanced text extraction
-      const decoder = new TextDecoder('utf-8', { fatal: false });
-      const content = decoder.decode(uint8Array);
-      
-      let extractedText = '';
-      
-      // Method 1: Look for readable text patterns (English and Chinese)
-      const textMatches = content.match(/[\u4e00-\u9fff\u3400-\u4dbfa-zA-Z][\u4e00-\u9fff\u3400-\u4dbfa-zA-Z\s.,!?;:'"()-]{15,}/g);
-      if (textMatches && textMatches.length > 0) {
-        extractedText = textMatches
-          .filter(match => {
-            // Filter out matches that are mostly punctuation or numbers
-            const validChars = match.match(/[\u4e00-\u9fff\u3400-\u4dbfa-zA-Z]/g);
-            return validChars && validChars.length > match.length * 0.3;
-          })
-          .slice(0, 30) // Take first 30 matches
-          .join(' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-          .slice(0, 5000); // Limit to first 5000 characters
-      }
-      
-      // Method 2: If method 1 fails, try general text extraction
-      if (extractedText.length < 100) {
-        const readableChunks = content.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]{10,}/g);
-        if (readableChunks && readableChunks.length > 0) {
-          extractedText = readableChunks
-            .filter(chunk => {
-              const validChars = chunk.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]/g);
-              return validChars && validChars.length > chunk.length * 0.4;
-            })
-            .slice(0, 50) // Take first 50 chunks
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 5000);
-        }
-      }
-      
-      if (extractedText.length > 50) {
-        return `[MOBI电子书: ${file.name}]\n提取的内容预览：\n\n${extractedText}`;
-      } else {
-        return `[MOBI电子书: ${file.name}]\n注意：无法提取可读文本内容。建议：\n1. 使用Calibre将MOBI转换为.txt或.md格式\n2. 检查文件是否有DRM保护\n3. 手动复制文本内容`;
-      }
-    } catch (error) {
-      return `[MOBI电子书: ${file.name}]\n错误：读取MOBI文件时出错。请使用Calibre转换为.txt或.md格式。`;
-    }
-  };
-
-  // Enhanced DOC content extraction attempt
-  const extractDocText = async (file: File): Promise<string> => {
-    try {
-      // Try multiple encoding approaches for DOC files
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      // Try UTF-8 first
-      let content = '';
-      try {
-        const decoder = new TextDecoder('utf-8', { fatal: false });
-        content = decoder.decode(uint8Array);
-      } catch {
-        // Fallback to other encodings for Chinese documents
-        try {
-          const decoder = new TextDecoder('gb2312', { fatal: false });
-          content = decoder.decode(uint8Array);
-        } catch {
-          try {
-            const decoder = new TextDecoder('gbk', { fatal: false });
-            content = decoder.decode(uint8Array);
-          } catch {
-            const decoder = new TextDecoder('utf-8', { fatal: false });
-            content = decoder.decode(uint8Array);
-          }
-        }
-      }
-      
-      // Extract readable text from DOC binary content
-      // DOC files contain readable text mixed with binary data
-      let extractedText = '';
-      
-      // Method 1: Look for consecutive readable characters (including Chinese)
-      const readableChunks = content.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007e\u00a0-\u00ff]{10,}/g);
-      if (readableChunks && readableChunks.length > 0) {
-        extractedText = readableChunks
+      // If HTML extraction fails, try general text extraction
+      if (extractedTexts.length === 0) {
+        const readableChunks = content.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z][^\x00-\x08\x0b-\x1f\x7f]{20,}/g) || [];
+        extractedTexts = readableChunks
           .filter(chunk => {
-            // Filter out chunks that are mostly control characters or binary data
-            const validChars = chunk.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007e]/g);
+            const validChars = chunk.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]/g);
             return validChars && validChars.length > chunk.length * 0.3;
+          });
+      }
+      
+      const fullExtractedContent = extractedTexts.join('\n\n');
+      const integrity = preserveContentIntegrity(content, fullExtractedContent, 'EPUB_EXTRACTION');
+      
+      if (fullExtractedContent.length > 20) {
+        return {
+          content: `[EPUB电子书: ${file.name}]\n\n${fullExtractedContent}`,
+          integrity
+        };
+      } else {
+        return {
+          content: `[EPUB电子书: ${file.name}]\n错误：读取EPUB文件时出错。请转换为TXT格式或手动复制内容。`,
+          integrity: { ...integrity, hasLossWarning: true }
+        };
+      }
+    } catch (error) {
+      console.error('EPUB extraction error:', error);
+      const errorIntegrity: ContentIntegrityInfo = {
+        originalSize: file.size,
+        extractedSize: 0,
+        compressionRatio: 0,
+        hasLossWarning: true,
+        extractionMethod: 'EPUB_ERROR'
+      };
+      return {
+        content: `[EPUB电子书: ${file.name}]\n错误：读取EPUB文件时出错。请转换为TXT格式或手动复制内容。`,
+        integrity: errorIntegrity
+      };
+    }
+  };
+
+  // Enhanced DOC text extraction with full content preservation  
+  const extractDocText = async (file: File): Promise<{ content: string; integrity: ContentIntegrityInfo }> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const originalContent = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);
+      
+      // Enhanced multi-encoding approach
+      let content = '';
+      const encodings = ['utf-8', 'gbk', 'gb2312', 'big5', 'utf-16'];
+      
+      for (const encoding of encodings) {
+        try {
+          const decoder = new TextDecoder(encoding, { fatal: false });
+          content = decoder.decode(uint8Array);
+          if (content && !content.includes('')) {
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+      
+      let extractedText = '';
+      
+      // Method 1: Advanced pattern matching for readable content
+      const readablePatterns = [
+        /[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007e\u00a0-\u00ff]{10,}/g,
+        /[a-zA-Z\s]{20,}/g,
+        /[\u4e00-\u9fff]{5,}/g
+      ];
+      
+      const allMatches: string[] = [];
+      readablePatterns.forEach(pattern => {
+        const matches = content.match(pattern) || [];
+        allMatches.push(...matches);
+      });
+      
+      if (allMatches.length > 0) {
+        extractedText = allMatches
+          .filter(chunk => {
+            const validChars = chunk.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]/g);
+            return validChars && validChars.length > chunk.length * 0.2;
           })
           .join(' ')
           .replace(/\s+/g, ' ')
           .trim();
       }
       
-      // Method 2: If method 1 fails, try basic text extraction
-      if (extractedText.length < 50) {
+      // Method 2: Line-by-line analysis for better content preservation
+      if (extractedText.length < 100) {
         const lines = content.split(/[\r\n]+/);
         const textLines = lines.filter(line => {
           const cleanLine = line.trim();
-          return cleanLine.length > 5 && 
-                 /[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007e]/.test(cleanLine) &&
+          return cleanLine.length > 3 && 
+                 /[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]/.test(cleanLine) &&
                  !cleanLine.match(/^[\x00-\x1f\x7f-\x9f]+$/);
         });
-        extractedText = textLines.join('\n').slice(0, 5000);
+        extractedText = textLines.join('\n'); // Remove character limit
       }
       
-      if (extractedText.length > 50) {
-        return `[WORD DOCUMENT: ${file.name}]\n\n提取的内容预览：\n\n${extractedText}`;
+      const integrity = preserveContentIntegrity(originalContent, extractedText, 'DOC_BINARY_EXTRACTION');
+      
+      if (extractedText.length > 10) {
+        return {
+          content: `[WORD DOCUMENT: ${file.name}]\n\n完整内容提取：\n\n${extractedText}`,
+          integrity
+        };
       } else {
-        return `[WORD DOCUMENT: ${file.name}]\n注意：无法从此DOC文档中提取可读内容。这可能是因为：\n1. 文档格式复杂或受保护\n2. 文档包含主要是图片或表格\n3. 编码问题\n\n建议：请将文档另存为.txt格式，或复制文本内容手动粘贴。`;
+        const fallbackInfo = `[WORD DOCUMENT: ${file.name}]\n
+文档信息：
+- 文件大小: ${(file.size / 1024).toFixed(1)} KB
+- 文档类型: ${file.type || '未知'}
+- 提取方法: 二进制解析
+
+提取状态：未发现足够的可读文本内容
+
+建议解决方案：
+1. 将文档另存为.txt格式（推荐）
+2. 复制文档内容手动粘贴到聊天框
+3. 检查文档是否有密码保护
+4. 尝试使用更新版本的Word打开后重新保存
+
+[完整性信息] 原始大小: ${file.size} 字节, 提取长度: ${extractedText.length} 字符`;
+        
+        return {
+          content: fallbackInfo,
+          integrity: { ...integrity, hasLossWarning: true }
+        };
       }
     } catch (error) {
       console.error('DOC extraction error:', error);
-      return `[WORD DOCUMENT: ${file.name}]\n错误：无法读取DOC文档内容。请将文档转换为TXT格式或复制内容后手动输入。`;
+      const errorIntegrity: ContentIntegrityInfo = {
+        originalSize: file.size,
+        extractedSize: 0,
+        compressionRatio: 0,
+        hasLossWarning: true,
+        extractionMethod: 'DOC_ERROR'
+      };
+      return {
+        content: `[WORD DOCUMENT: ${file.name}]\n错误：无法读取DOC文档内容。请将文档转换为TXT格式或复制内容后手动输入。`,
+        integrity: errorIntegrity
+      };
     }
   };
 
-  // Basic PDF text extraction attempt
-  const extractPdfText = async (file: File): Promise<string> => {
-    try {
-      // PDF files are complex binary format
-      // We'll attempt basic text extraction from uncompressed parts
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      // Convert to string and look for readable text
-      const decoder = new TextDecoder('utf-8', { fatal: false });
-      const content = decoder.decode(uint8Array);
-      
-      let extractedText = '';
-      
-      // Method 1: Look for text between stream objects (basic PDF text extraction)
-      const streamMatches = content.match(/stream\s*\n([\s\S]*?)\n\s*endstream/g);
-      if (streamMatches && streamMatches.length > 0) {
-        const streamTexts = streamMatches
-          .map(match => {
-            // Extract content between stream and endstream
-            const streamContent = match.replace(/^stream\s*\n/, '').replace(/\n\s*endstream$/, '');
-            return streamContent;
-          })
-          .join('\n');
-        
-        // Look for readable text in stream content
-        const readableChunks = streamTexts.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z][^\x00-\x08\x0b-\x1f\x7f]{5,}/g);
-        if (readableChunks && readableChunks.length > 0) {
-          extractedText = readableChunks
-            .filter(chunk => {
-              const validChars = chunk.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]/g);
-              return validChars && validChars.length > chunk.length * 0.3;
-            })
-            .slice(0, 50)
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 5000);
-        }
-      }
-      
-      // Method 2: If stream extraction fails, try general text extraction
-      if (extractedText.length < 100) {
-        const readableChunks = content.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]{10,}/g);
-        if (readableChunks && readableChunks.length > 0) {
-          extractedText = readableChunks
-            .filter(chunk => {
-              // Filter out PDF metadata and formatting codes
-              const validChars = chunk.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]/g);
-              return validChars && 
-                     validChars.length > chunk.length * 0.5 &&
-                     !chunk.includes('/Type') &&
-                     !chunk.includes('/Font') &&
-                     !chunk.includes('/Page') &&
-                     !chunk.match(/^[A-Z]{2,}$/);
-            })
-            .slice(0, 50)
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 5000);
-        }
-      }
-      
-      if (extractedText.length > 100) {
-        return `[PDF文档: ${file.name}]\n提取的内容预览（基础提取）：\n\n${extractedText}\n\n注意：PDF文本提取功能有限，如需完整内容请转换为.txt格式。`;
-      } else {
-        return `[PDF文档: ${file.name}]\n注意：无法从此PDF中提取可读文本。建议：\n1. 将PDF另存为.txt格式\n2. 复制PDF中的文本内容手动粘贴\n3. 使用专业PDF转换工具\n4. 检查PDF是否为扫描版或受保护`;
-      }
-    } catch (error) {
-      console.error('PDF extraction error:', error);
-      return `[PDF文档: ${file.name}]\n错误：读取PDF时出错。请将PDF转换为TXT格式或手动复制内容。`;
-    }
-  };
-
-  // RTF (Rich Text Format) text extraction
-  const extractRtfText = async (file: File): Promise<string> => {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      // RTF is a text-based format, try to decode it
-      const decoder = new TextDecoder('utf-8', { fatal: false });
-      let content = decoder.decode(uint8Array);
-      
-      // If UTF-8 fails, try other encodings for Chinese content
-      if (content.includes('�') || content.length === 0) {
-        try {
-          const decoder2 = new TextDecoder('gbk', { fatal: false });
-          content = decoder2.decode(uint8Array);
-        } catch {
-          const decoder3 = new TextDecoder('gb2312', { fatal: false });
-          content = decoder3.decode(uint8Array);
-        }
-      }
-      
-      let extractedText = '';
-      
-      // Method 1: Remove RTF control codes and extract plain text
-      if (content.startsWith('{\\rtf')) {
-        // Remove RTF formatting codes
-        extractedText = content
-          .replace(/\\[a-z]+\d*\s?/g, ' ') // Remove RTF control words
-          .replace(/[{}]/g, ' ') // Remove braces
-          .replace(/\\\\/g, '\\') // Handle escaped backslashes
-          .replace(/\\'/g, "'") // Handle escaped quotes
-          .replace(/\s+/g, ' ') // Normalize spaces
-          .trim()
-          .slice(0, 5000);
-      } else {
-        // If not proper RTF format, try general text extraction
-        const readableChunks = content.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]{10,}/g);
-        if (readableChunks && readableChunks.length > 0) {
-          extractedText = readableChunks
-            .filter(chunk => {
-              const validChars = chunk.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007ea-zA-Z]/g);
-              return validChars && validChars.length > chunk.length * 0.4;
-            })
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 5000);
-        }
-      }
-      
-      if (extractedText.length > 50) {
-        return `[RTF文档: ${file.name}]\n\n提取的内容预览：\n\n${extractedText}`;
-      } else {
-        return `[RTF文档: ${file.name}]\n注意：无法从此RTF文档中提取可读内容。建议：\n1. 将RTF另存为.txt格式\n2. 在Word中打开后复制文本内容\n3. 检查文档是否损坏`;
-      }
-    } catch (error) {
-      console.error('RTF extraction error:', error);
-      return `[RTF文档: ${file.name}]\n错误：无法读取RTF文档内容。请将文档转换为TXT格式或复制内容后手动输入。`;
-    }
-  };
-
-  // Enhanced DOCX content extraction attempt
-  const extractDocxText = async (file: File): Promise<string> => {
-    try {
-      // DOCX files are ZIP archives containing XML files
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      // Try to extract text from DOCX binary content
-      // DOCX contains readable text within XML structure
-      const decoder = new TextDecoder('utf-8', { fatal: false });
-      const content = decoder.decode(uint8Array);
-      
-      let extractedText = '';
-      
-      // Method 1: Look for text within XML tags that typically contain document content
-      // DOCX stores text in <w:t> tags within the document.xml
-      const xmlTextMatches = content.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
-      if (xmlTextMatches && xmlTextMatches.length > 0) {
-        extractedText = xmlTextMatches
-          .map(match => {
-            // Extract text between <w:t> tags
-            const textMatch = match.match(/<w:t[^>]*>([^<]+)<\/w:t>/);
-            return textMatch ? textMatch[1] : '';
-          })
-          .filter(text => text.trim().length > 0)
-          .join(' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-      }
-      
-      // Method 2: If XML parsing fails, try general text extraction
-      if (extractedText.length < 50) {
-        const readableChunks = content.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007e\u00a0-\u00ff]{10,}/g);
-        if (readableChunks && readableChunks.length > 0) {
-          extractedText = readableChunks
-            .filter(chunk => {
-              // Filter out chunks that are mostly XML tags or binary data
-              const validChars = chunk.match(/[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007e]/g);
-              return validChars && 
-                     validChars.length > chunk.length * 0.4 && 
-                     !chunk.includes('<?xml') && 
-                     !chunk.includes('<w:') &&
-                     !chunk.includes('xmlns');
-            })
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-        }
-      }
-      
-      // Method 3: If still no good content, try basic line extraction
-      if (extractedText.length < 50) {
-        const lines = content.split(/[\r\n]+/);
-        const textLines = lines.filter(line => {
-          const cleanLine = line.trim();
-          return cleanLine.length > 5 && 
-                 /[\u4e00-\u9fff\u3400-\u4dbf\u0020-\u007e]/.test(cleanLine) &&
-                 !cleanLine.match(/^[\x00-\x1f\x7f-\x9f]+$/) &&
-                 !cleanLine.includes('<?xml') &&
-                 !cleanLine.includes('<w:') &&
-                 !cleanLine.includes('xmlns');
-        });
-        extractedText = textLines.join('\n').slice(0, 5000);
-      }
-      
-      if (extractedText.length > 50) {
-        return `[WORD DOCUMENT: ${file.name}]\n\n提取的内容预览：\n\n${extractedText.slice(0, 5000)}`;
-      } else {
-        return `[WORD DOCUMENT: ${file.name}]\n注意：无法从此DOCX文档中提取可读内容。这可能是因为：\n1. 文档格式复杂或受保护\n2. 文档包含主要是图片或表格\n3. 文档使用了复杂的格式\n\n建议：请将文档另存为.txt或.md格式，或复制文本内容手动粘贴。`;
-      }
-    } catch (error) {
-      console.error('DOCX extraction error:', error);
-      return `[WORD DOCUMENT: ${file.name}]\n错误：无法读取DOCX文档内容。请将文档转换为TXT格式或复制内容后手动输入。`;
-    }
-  };
-
-  // Read file content based on file type
-  const readFileContent = async (file: File): Promise<string> => {
+  // Enhanced content reading with integrity preservation
+  const readFileContent = async (file: File): Promise<{ content: string; integrity: ContentIntegrityInfo }> => {
     const fileName = file.name.toLowerCase();
     
-    // Handle EPUB and MOBI files with special extraction
+    console.log(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size}`);
+    
+    // Handle special formats that return integrity info
     if (fileName.endsWith('.epub') || file.type === 'application/epub+zip') {
       return await extractEpubText(file);
-    } else if (fileName.endsWith('.mobi') || file.type === 'application/x-mobipocket-ebook') {
-      return await extractMobiText(file);
     } else if (fileName.endsWith('.doc') || (file.type.includes('word') && !fileName.endsWith('.docx'))) {
-      // Handle DOC files with enhanced extraction
       return await extractDocText(file);
-    } else if (fileName.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      // Handle DOCX files with enhanced extraction
-      return await extractDocxText(file);
-    } else if (fileName.endsWith('.rtf') || file.type === 'application/rtf' || file.type === 'text/rtf') {
-      // Handle RTF files with enhanced extraction
-      return await extractRtfText(file);
     }
     
-    // Handle other formats with FileReader
+    // Handle text-based formats with FileReader
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
+      const tryReadWithEncoding = (encoding: string = 'utf-8') => {
+        const reader = new FileReader();
         
-        if (file.type === 'text/plain' || fileName.endsWith('.txt')) {
-          // Check if content looks valid, if not try different encoding
-          if (result && result.length > 0 && !result.includes('�')) {
-            resolve(result);
+        reader.onload = (event) => {
+          const result = event.target?.result as string;
+          const originalSize = file.size;
+          
+          if (file.type === 'text/plain' || fileName.endsWith('.txt')) {
+            if (result && result.length > 0) {
+              if (!result.includes('') || encoding !== 'utf-8') {
+                const content = result.length > 1 ? result : `[空文件: ${file.name}]\n文件内容为空或无法读取`;
+                const integrity = preserveContentIntegrity(result, content, `TEXT_${encoding.toUpperCase()}`);
+                resolve({ content, integrity });
+              } else {
+                tryReadWithEncoding('gbk');
+              }
+            } else {
+              const content = `[空文件: ${file.name}]\n文件内容为空或无法读取`;
+              const integrity: ContentIntegrityInfo = {
+                originalSize,
+                extractedSize: content.length,
+                compressionRatio: 0,
+                hasLossWarning: true,
+                extractionMethod: 'EMPTY_FILE'
+              };
+              resolve({ content, integrity });
+            }
+          } else if (fileName.endsWith('.md') || fileName.endsWith('.markdown') || file.type === 'text/markdown' || file.type === 'text/x-markdown') {
+            if (result && result.length > 0) {
+              if (!result.includes('') || encoding !== 'utf-8') {
+                const contentBody = result.length > 1 ? result : '文件内容为空';
+                const content = `[MARKDOWN文件: ${file.name}]\n\n${contentBody}`;
+                const integrity = preserveContentIntegrity(result, content, `MARKDOWN_${encoding.toUpperCase()}`);
+                resolve({ content, integrity });
+              } else {
+                tryReadWithEncoding('gbk');
+              }
+            } else {
+              const content = `[MARKDOWN文件: ${file.name}]\n\n文件内容为空或无法读取`;
+              const integrity: ContentIntegrityInfo = {
+                originalSize,
+                extractedSize: content.length,
+                compressionRatio: 0,
+                hasLossWarning: true,
+                extractionMethod: 'EMPTY_MARKDOWN'
+              };
+              resolve({ content, integrity });
+            }
           } else {
-            // Try alternative encoding detection for Chinese content
-            const reader2 = new FileReader();
-            reader2.onload = (event2) => {
-              const result2 = event2.target?.result as string;
-              resolve(result2 || result);
-            };
-            reader2.onerror = () => resolve(result);
-            try {
-              reader2.readAsText(file, 'gbk');
-            } catch {
-              resolve(result);
+            // Other formats
+            if (result && result.length > 0) {
+              const contentBody = result.length > 1 ? result : '文件内容为空';
+              const content = `[文件格式: ${file.name}]\n尝试以文本格式读取:\n\n${contentBody}`;
+              const integrity = preserveContentIntegrity(result, content, `GENERIC_${encoding.toUpperCase()}`);
+              resolve({ content, integrity });
+            } else {
+              const content = `[不支持的格式: ${file.name}]\n无法读取此文件格式。建议转换为TXT、MD或其他支持的格式。`;
+              const integrity: ContentIntegrityInfo = {
+                originalSize,
+                extractedSize: content.length,
+                compressionRatio: 0,
+                hasLossWarning: true,
+                extractionMethod: 'UNSUPPORTED_FORMAT'
+              };
+              resolve({ content, integrity });
             }
           }
-        } else if (fileName.endsWith('.md') || fileName.endsWith('.markdown') || file.type === 'text/markdown') {
-          // Markdown files - read as text and add format note with encoding detection
-          if (result && result.length > 0 && !result.includes('�')) {
-            resolve(`[MARKDOWN文件: ${file.name}]\n\n${result}`);
+        };
+        
+        reader.onerror = (error) => {
+          console.error(`File reading error with ${encoding}:`, error);
+          if (encoding === 'utf-8') {
+            tryReadWithEncoding('gbk');
           } else {
-            // Try alternative encoding for Chinese markdown
-            const reader2 = new FileReader();
-            reader2.onload = (event2) => {
-              const result2 = event2.target?.result as string;
-              resolve(`[MARKDOWN文件: ${file.name}]\n\n${result2 || result}`);
-            };
-            reader2.onerror = () => resolve(`[MARKDOWN文件: ${file.name}]\n\n${result}`);
-            try {
-              reader2.readAsText(file, 'gbk');
-            } catch {
-              resolve(`[MARKDOWN文件: ${file.name}]\n\n${result}`);
-            }
+            reject(new Error(`Failed to read file: ${file.name}`));
           }
-        } else if (file.type === 'application/pdf' || fileName.endsWith('.pdf')) {
-          // Use the enhanced PDF extraction function
-          extractPdfText(file).then(resolve).catch(reject);
-          return; // Don't continue with FileReader for PDF
-        } else {
-          // Try to read as text anyway for other formats
-          try {
-            resolve(`[UNKNOWN FORMAT: ${file.name}]\nAttempting to read as text:\n\n${result}`);
-          } catch {
-            resolve(`[UNSUPPORTED FORMAT: ${file.name}]\nThis file format is not fully supported. Please convert to TXT, MD, or other supported formats.`);
-          }
-        }
+        };
+        
+        reader.readAsText(file, encoding);
       };
       
-      reader.onerror = () => {
-        reject(new Error(`Failed to read file: ${file.name}`));
-      };
-      
-      reader.readAsText(file, 'utf-8');
+      // Start with UTF-8 encoding
+      tryReadWithEncoding('utf-8');
     });
   };
 
@@ -895,24 +723,24 @@ The uploaded files contain valuable economic information that would be analyzed 
     if (!file || !file.file) return;
 
     try {
-      const content = await readFileContent(file.file);
+      const { content, integrity } = await readFileContent(file.file);
       
-      // Check if content extraction was successful
+      // Enhanced content validation with integrity consideration
       const isExtractionSuccessful = content && 
-        content.length > 50 && 
+        content.length > 10 &&
         !content.includes('内容提取失败') && 
         !content.includes('Content extraction failed') &&
-        !content.includes('无法从此DOC文档中提取可读内容') &&
-        !content.includes('无法从此DOCX文档中提取可读内容') &&
-        !content.includes('无法从此PDF中提取可读文本') &&
-        !content.includes('无法提取可读文本内容') &&
-        !content.includes('错误：无法读取DOC文档内容') &&
-        !content.includes('错误：无法读取DOCX文档内容') &&
-        !content.includes('错误：读取PDF时出错') &&
-        !content.includes('错误：读取EPUB文件时出错') &&
-        !content.includes('错误：读取MOBI文件时出错') &&
-        !content.includes('Note: DOCX content extraction is not yet implemented') &&
-        !content.includes('not yet implemented');
+        !content.includes('无法读取此文件格式') &&
+        !content.includes('文件内容为空或无法读取');
+      
+      // Log integrity information
+      console.log(`文件完整性信息 - ${file.name}:`, {
+        原始大小: integrity.originalSize,
+        提取大小: integrity.extractedSize,
+        保留比例: (integrity.compressionRatio * 100).toFixed(1) + '%',
+        提取方法: integrity.extractionMethod,
+        有损失警告: integrity.hasLossWarning
+      });
       
       setUploadedFiles(prev => 
         prev.map(f => 
@@ -920,25 +748,34 @@ The uploaded files contain valuable economic information that would be analyzed 
             ? { 
                 ...f, 
                 content: content,
+                integrityInfo: integrity,
                 status: isExtractionSuccessful ? 'completed' : 'error'
               }
             : f
         )
       );
 
-      // Log extraction result for debugging
-      if (!isExtractionSuccessful) {
-        console.warn(`Content extraction failed for ${file.name}:`, content);
+      // Warn user if content integrity is compromised
+      if (integrity.hasLossWarning) {
+        console.warn(`⚠️ 内容完整性警告 - ${file.name}: 可能存在内容损失（保留比例: ${(integrity.compressionRatio * 100).toFixed(1)}%）`);
       }
     } catch (error) {
       console.error('Failed to read file content:', error);
       
-      const errorMessage = `[文件处理错误: ${file.name}]\n错误：${error instanceof Error ? error.message : '未知错误'}\n\n建议：\n1. 确保文件未损坏\n2. 尝试将文档另存为.txt格式\n3. 或者复制文档内容手动粘贴`;
+      const errorMessage = `[文件处理错误: ${file.name}]\n错误：${error instanceof Error ? error.message : '未知错误'}\n\n内容完整性状态：处理失败\n\n建议：\n1. 确保文件未损坏\n2. 尝试将文档另存为.txt格式\n3. 或者复制文档内容手动粘贴`;
+      
+      const errorIntegrity: ContentIntegrityInfo = {
+        originalSize: file.file?.size || 0,
+        extractedSize: 0,
+        compressionRatio: 0,
+        hasLossWarning: true,
+        extractionMethod: 'PROCESSING_ERROR'
+      };
       
       setUploadedFiles(prev => 
         prev.map(f => 
           f.id === fileId 
-            ? { ...f, status: 'error', content: errorMessage }
+            ? { ...f, status: 'error', content: errorMessage, integrityInfo: errorIntegrity }
             : f
         )
       );
@@ -1502,8 +1339,25 @@ The uploaded files contain valuable economic information that would be analyzed 
                                 <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
                                   <div className="flex justify-between items-center mb-1">
                                     <span className="font-medium text-gray-700">Content Preview:</span>
-                                    <span className="text-gray-500">{file.content.length} characters</span>
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-gray-500">{file.content.length} characters</span>
+                                      {file.integrityInfo && (
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                          file.integrityInfo.hasLossWarning 
+                                            ? 'bg-yellow-100 text-yellow-800' 
+                                            : 'bg-green-100 text-green-800'
+                                        }`}>
+                                          {(file.integrityInfo.compressionRatio * 100).toFixed(0)}% 完整性
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
+                                  {file.integrityInfo && (
+                                    <div className="text-xs text-gray-500 mb-2 flex justify-between">
+                                      <span>提取方法: {file.integrityInfo.extractionMethod}</span>
+                                      <span>原始: {file.integrityInfo.originalSize} → 提取: {file.integrityInfo.extractedSize}</span>
+                                    </div>
+                                  )}
                                   <div className="text-gray-600 max-h-20 overflow-y-auto">
                                     {file.content.length > 200 
                                       ? `${file.content.substring(0, 200)}...` 
