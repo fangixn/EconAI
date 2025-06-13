@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,14 +18,32 @@ import {
   Menu,
   X,
   FileText,
-  Sparkles
+  Sparkles,
+  Send,
+  Paperclip,
+  Image as ImageIcon,
+  Mic,
+  Plus,
+  Trash2
 } from 'lucide-react';
+
+type AIModel = 'gpt-3.5-turbo' | 'gpt-4' | 'claude-2';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  files?: string[];
+}
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('chatgpt');
+  const [selectedModel, setSelectedModel] = useState<AIModel>('gpt-3.5-turbo');
   const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const aiModels = [
     { id: 'chatgpt', name: 'ChatGPT', color: 'bg-green-500' },
@@ -68,6 +86,88 @@ export default function Home() {
       description: "Receive professional-grade responses from multiple AI models specialized in economic analysis."
     }
   ];
+
+  const handleSendMessage = async () => {
+    if (!message.trim() || isLoading) return;
+    
+    // 添加用户消息
+    const newMessages = [...messages, { 
+      role: 'user', 
+      content: message,
+      files: uploadedFiles
+    }];
+    setMessages(newMessages);
+    setMessage('');
+    setUploadedFiles([]);
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          messages: newMessages,
+          model: selectedModel
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
+
+      const data = await response.json();
+      
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: data.response
+      }]);
+    } catch (error) {
+      console.error('Error:', error);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: '抱歉，发生了错误。请稍后重试。'
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setMessage('');
+    setUploadedFiles([]);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const formData = new FormData();
+    formData.append('file', files[0]);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setUploadedFiles(prev => [...prev, data.fileName]);
+    } catch (error) {
+      console.error('Upload Error:', error);
+      alert('文件上传失败，请重试');
+    }
+  };
+
+  const removeFile = (fileName: string) => {
+    setUploadedFiles(prev => prev.filter(file => file !== fileName));
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -230,7 +330,7 @@ export default function Home() {
                     key={model.id}
                     variant={selectedModel === model.id ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setSelectedModel(model.id)}
+                    onClick={() => setSelectedModel(model.id as AIModel)}
                     className={selectedModel === model.id ? `${model.color} text-white hover:opacity-90` : ''}
                   >
                     {model.name}
