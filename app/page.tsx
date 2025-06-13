@@ -69,6 +69,31 @@ interface ApiSettings {
   configs: ApiConfig;
 }
 
+// Vector search and RAG functionality
+interface DocumentChunk {
+  id: string;
+  content: string;
+  metadata: {
+    fileName: string;
+    chunkIndex: number;
+    totalChunks: number;
+    embedding?: number[];
+  };
+  relevanceScore?: number;
+}
+
+interface VectorSearchResult {
+  chunks: DocumentChunk[];
+  totalRelevant: number;
+  searchQuery: string;
+}
+
+interface RAGContext {
+  retrievedChunks: DocumentChunk[];
+  originalQuery: string;
+  contextSummary: string;
+}
+
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState('chatgpt');
@@ -85,6 +110,12 @@ export default function Home() {
     configs: {}
   });
   const [tempApiConfigs, setTempApiConfigs] = useState<ApiConfig>({});
+
+  // Vector search and RAG states
+  const [documentChunks, setDocumentChunks] = useState<DocumentChunk[]>([]);
+  const [isVectorizing, setIsVectorizing] = useState(false);
+  const [vectorSearchEnabled, setVectorSearchEnabled] = useState(true);
+  const [searchResults, setSearchResults] = useState<VectorSearchResult | null>(null);
 
   const aiModels = [
     { id: 'chatgpt', name: 'ChatGPT', color: 'bg-green-500' },
@@ -110,43 +141,232 @@ export default function Home() {
 
   // Save API configurations
   const saveApiConfigs = () => {
-    const cleanConfigs = Object.fromEntries(
-      Object.entries(tempApiConfigs).filter(([_, value]) => value && value.trim())
-    );
-    
-    localStorage.setItem('econ-ai-api-configs', JSON.stringify(cleanConfigs));
-    setApiSettings({
-      enabled: Object.keys(cleanConfigs).length > 0,
-      configs: cleanConfigs
-    });
+    setApiSettings(prev => ({
+      enabled: tempApiConfigs.openai || tempApiConfigs.google ? true : false,
+      configs: tempApiConfigs
+    }));
+    localStorage.setItem('econai-api-configs', JSON.stringify(tempApiConfigs));
     setIsSettingsOpen(false);
   };
 
-  // Real AI API call function
+  // Document chunking and vectorization
+  const chunkDocument = (content: string, fileName: string): DocumentChunk[] => {
+    const chunkSize = 1000; // Characters per chunk
+    const overlap = 200;    // Overlap between chunks
+    const chunks: DocumentChunk[] = [];
+    
+    // Remove extra whitespace and normalize
+    const cleanContent = content.replace(/\s+/g, ' ').trim();
+    
+    // Smart chunking: try to break at sentence boundaries
+    const sentences = cleanContent.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    let currentChunk = '';
+    let chunkIndex = 0;
+    
+    for (let i = 0; i < sentences.length; i++) {
+      const sentence = sentences[i].trim() + '.';
+      
+      if (currentChunk.length + sentence.length <= chunkSize || currentChunk.length === 0) {
+        currentChunk += (currentChunk.length > 0 ? ' ' : '') + sentence;
+      } else {
+        // Create chunk
+        if (currentChunk.trim().length > 0) {
+          chunks.push({
+            id: `${fileName}-chunk-${chunkIndex}`,
+            content: currentChunk.trim(),
+            metadata: {
+              fileName,
+              chunkIndex,
+              totalChunks: 0, // Will be updated later
+            }
+          });
+          chunkIndex++;
+        }
+        
+        // Start new chunk with overlap
+        const words = currentChunk.split(' ');
+        const overlapWords = words.slice(-Math.floor(overlap / 10)); // Rough overlap
+        currentChunk = overlapWords.join(' ') + ' ' + sentence;
+      }
+    }
+    
+    // Add final chunk
+    if (currentChunk.trim().length > 0) {
+      chunks.push({
+        id: `${fileName}-chunk-${chunkIndex}`,
+        content: currentChunk.trim(),
+        metadata: {
+          fileName,
+          chunkIndex,
+          totalChunks: 0,
+        }
+      });
+    }
+    
+    // Update total chunks count
+    chunks.forEach(chunk => {
+      chunk.metadata.totalChunks = chunks.length;
+    });
+    
+    return chunks;
+  };
+
+  // Simple text embedding using TF-IDF-like approach
+  const createSimpleEmbedding = (text: string): number[] => {
+    // Simple word frequency-based embedding (for demo purposes)
+    // In a real implementation, you'd use proper embedding models
+    const words = text.toLowerCase().match(/\b\w+\b/g) || [];
+    const wordFreq: { [key: string]: number } = {};
+    
+    words.forEach(word => {
+      wordFreq[word] = (wordFreq[word] || 0) + 1;
+    });
+    
+    // Create fixed-size vector (100 dimensions)
+    const embedding = new Array(100).fill(0);
+    const uniqueWords = Object.keys(wordFreq);
+    
+    uniqueWords.forEach((word, index) => {
+      if (index < 100) {
+        embedding[index] = wordFreq[word] / words.length; // Normalized frequency
+      }
+    });
+    
+    return embedding;
+  };
+
+  // Calculate cosine similarity between two vectors
+  const cosineSimilarity = (vecA: number[], vecB: number[]): number => {
+    const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
+    const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+    const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
+    
+    if (magnitudeA === 0 || magnitudeB === 0) return 0;
+    return dotProduct / (magnitudeA * magnitudeB);
+  };
+
+  // Semantic search in document chunks
+  const searchDocumentChunks = (query: string, topK: number = 5): VectorSearchResult => {
+    if (documentChunks.length === 0) {
+      return { chunks: [], totalRelevant: 0, searchQuery: query };
+    }
+    
+    const queryEmbedding = createSimpleEmbedding(query);
+    const scoredChunks = documentChunks.map(chunk => {
+      if (!chunk.metadata.embedding) {
+        chunk.metadata.embedding = createSimpleEmbedding(chunk.content);
+      }
+      
+      const similarity = cosineSimilarity(queryEmbedding, chunk.metadata.embedding);
+      return {
+        ...chunk,
+        relevanceScore: similarity
+      };
+    });
+    
+    // Sort by relevance and take top K
+    const topChunks = scoredChunks
+      .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+      .slice(0, topK)
+      .filter(chunk => (chunk.relevanceScore || 0) > 0.1); // Minimum relevance threshold
+    
+    return {
+      chunks: topChunks,
+      totalRelevant: topChunks.length,
+      searchQuery: query
+    };
+  };
+
+  // Process documents into chunks when files are uploaded
+  const processDocumentsIntoChunks = async (files: UploadedFile[]) => {
+    setIsVectorizing(true);
+    const allChunks: DocumentChunk[] = [];
+    
+    for (const file of files) {
+      if (file.content && file.status === 'completed') {
+        const chunks = chunkDocument(file.content, file.name);
+        
+        // Add embeddings to chunks
+        chunks.forEach(chunk => {
+          chunk.metadata.embedding = createSimpleEmbedding(chunk.content);
+        });
+        
+        allChunks.push(...chunks);
+      }
+    }
+    
+    setDocumentChunks(allChunks);
+    setIsVectorizing(false);
+    
+    console.log(`📚 向量化完成: 处理了 ${allChunks.length} 个文档块`);
+  };
+
+  // Real AI API call function with RAG support
   const callRealAI = async (message: string, model: string): Promise<string> => {
     const { configs } = apiSettings;
     
-    // Prepare context from uploaded files
-    const completedFiles = uploadedFiles.filter(f => f.status === 'completed' && f.content);
-    const failedFiles = uploadedFiles.filter(f => f.status === 'error');
     let contextPrompt = message;
+    let ragContext: RAGContext | null = null;
     
-    if (completedFiles.length > 0) {
-      const fileContexts = completedFiles.map(file => 
-        `--- Content from ${file.name} ---\n${file.content}\n--- End of ${file.name} ---\n`
-      ).join('\n');
+    // Use RAG if vector search is enabled and we have document chunks
+    if (vectorSearchEnabled && documentChunks.length > 0) {
+      const searchResult = searchDocumentChunks(message, 3);
+      setSearchResults(searchResult);
       
-      contextPrompt = `Please analyze the following uploaded documents and answer the user's question based on the content:
+      if (searchResult.chunks.length > 0) {
+        const retrievedContent = searchResult.chunks.map((chunk, index) => 
+          `[相关文档片段 ${index + 1}] (来源: ${chunk.metadata.fileName}, 块 ${chunk.metadata.chunkIndex + 1}/${chunk.metadata.totalChunks}, 相关度: ${(chunk.relevanceScore! * 100).toFixed(1)}%)\n${chunk.content}`
+        ).join('\n\n');
+        
+        ragContext = {
+          retrievedChunks: searchResult.chunks,
+          originalQuery: message,
+          contextSummary: `基于向量检索找到 ${searchResult.chunks.length} 个相关文档片段`
+        };
+        
+        contextPrompt = `作为经济学专家，请基于以下通过向量检索技术找到的相关文档内容回答问题：
+
+检索到的相关内容：
+${retrievedContent}
+
+用户问题：${message}
+
+请基于上述文档片段进行深入的经济学分析。请：
+1. 重点分析与问题最相关的文档内容
+2. 引用具体的数据、理论或案例
+3. 如果多个文档片段提供了不同角度，请综合分析
+4. 如果检索内容不足以完全回答问题，请说明并提供相关的经济学理论补充
+
+注意：以上内容来自用户上传的文档，通过向量相似度检索获得。`;
+
+        console.log(`🔍 RAG检索: 找到 ${searchResult.chunks.length} 个相关片段, 平均相关度: ${(searchResult.chunks.reduce((sum, chunk) => sum + (chunk.relevanceScore || 0), 0) / searchResult.chunks.length * 100).toFixed(1)}%`);
+      } else {
+        console.log('🔍 RAG检索: 未找到相关内容，使用一般知识回答');
+        contextPrompt = `作为经济学专家，用户问题："${message}"。
+
+注意：已检索用户上传的文档，但未找到直接相关的内容。请基于一般经济学知识回答，并建议用户可能需要提供更相关的文档或更具体的问题。`;
+      }
+    } else {
+      // Fallback to simple file content if no vector search
+      const completedFiles = uploadedFiles.filter(f => f.status === 'completed' && f.content);
+      const failedFiles = uploadedFiles.filter(f => f.status === 'error');
+      
+      if (completedFiles.length > 0) {
+        const fileContexts = completedFiles.map(file => 
+          `--- Content from ${file.name} ---\n${file.content}\n--- End of ${file.name} ---\n`
+        ).join('\n');
+        
+        contextPrompt = `Please analyze the following uploaded documents and answer the user's question based on the content:
 
 ${fileContexts}
 
 User Question: ${message}
 
 Please provide a detailed analysis based on the uploaded documents. If the documents don't contain relevant information to answer the question, please indicate that and provide general guidance.`;
-    } else if (failedFiles.length > 0) {
-      // If there are files but content extraction failed
-      const failedFileNames = failedFiles.map(f => f.name).join(', ');
-      contextPrompt = `The user has uploaded ${failedFiles.length} file(s) (${failedFileNames}), but content extraction failed. 
+      } else if (failedFiles.length > 0) {
+        // If there are files but content extraction failed
+        const failedFileNames = failedFiles.map(f => f.name).join(', ');
+        contextPrompt = `The user has uploaded ${failedFiles.length} file(s) (${failedFileNames}), but content extraction failed. 
 
 User Question: ${message}
 
@@ -156,6 +376,7 @@ Since I cannot read the uploaded document content, I'll provide a general respon
 3. Ensure the document is not corrupted or password-protected
 
 Now, let me address your question based on general economics knowledge:`;
+      }
     }
     
     try {
@@ -192,7 +413,7 @@ Now, let me address your question based on general economics knowledge:`;
       }
       
       if (model === 'gemini' && configs.google) {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${configs.google}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${configs.google}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -759,6 +980,13 @@ The uploaded files contain valuable economic information that would be analyzed 
       if (integrity.hasLossWarning) {
         console.warn(`⚠️ 内容完整性警告 - ${file.name}: 可能存在内容损失（保留比例: ${(integrity.compressionRatio * 100).toFixed(1)}%）`);
       }
+
+      // Auto-vectorize after successful file processing
+      if (isExtractionSuccessful && vectorSearchEnabled) {
+        const completedFiles = uploadedFiles.filter(f => f.status === 'completed' && f.content);
+        completedFiles.push({ ...file, content, integrityInfo: integrity, status: 'completed' });
+        await processDocumentsIntoChunks(completedFiles);
+      }
     } catch (error) {
       console.error('Failed to read file content:', error);
       
@@ -1106,6 +1334,36 @@ The uploaded files contain valuable economic information that would be analyzed 
                             <li>• Without API keys, the system will use simulated responses</li>
                           </ul>
                         </div>
+                        
+                        <div className="pt-4 border-t">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700">
+                                Vector Search (RAG)
+                              </label>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Enable semantic search in uploaded documents for more relevant AI responses
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => setVectorSearchEnabled(!vectorSearchEnabled)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                                vectorSearchEnabled ? 'bg-blue-600' : 'bg-gray-200'
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  vectorSearchEnabled ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                              />
+                            </button>
+                          </div>
+                          {documentChunks.length > 0 && (
+                            <div className="mt-2 text-xs text-gray-600">
+                              📚 Current vector database: {documentChunks.length} document chunks
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="flex justify-end space-x-3 pt-4">
@@ -1130,6 +1388,35 @@ The uploaded files contain valuable economic information that would be analyzed 
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
+                {/* RAG Search Results Display */}
+                {searchResults && searchResults.chunks.length > 0 && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-blue-800">
+                        🔍 Vector Search Results for: "{searchResults.searchQuery}"
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {searchResults.chunks.map((chunk, index) => (
+                        <div key={chunk.id} className="p-2 bg-white border border-blue-100 rounded text-xs">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-medium text-blue-700">
+                              📄 {chunk.metadata.fileName} (Chunk {chunk.metadata.chunkIndex + 1}/{chunk.metadata.totalChunks})
+                            </span>
+                            <span className="text-blue-600">
+                              {(chunk.relevanceScore! * 100).toFixed(1)}% relevant
+                            </span>
+                          </div>
+                          <p className="text-gray-600 max-h-16 overflow-y-auto">
+                            {chunk.content.length > 150 ? `${chunk.content.substring(0, 150)}...` : chunk.content}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Chat messages display area */}
                 {chatMessages.length > 0 && (
                   <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto space-y-3 mb-4">
@@ -1240,11 +1527,29 @@ The uploaded files contain valuable economic information that would be analyzed 
                   
                   {/* API Status Indicator */}
                   <div className="flex items-center justify-center mt-2">
-                    <div className="flex items-center space-x-2 text-xs text-gray-500">
-                      <div className={`w-2 h-2 rounded-full ${apiSettings.enabled ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-                      <span>
-                        {apiSettings.enabled ? 'Real AI Enabled' : 'Demo Mode (Configure API keys for real AI)'}
-                      </span>
+                    <div className="flex flex-col items-center space-y-1 text-xs text-gray-500">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${apiSettings.enabled ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                        <span>
+                          {apiSettings.enabled ? 'Real AI Enabled' : 'Demo Mode (Configure API keys for real AI)'}
+                        </span>
+                      </div>
+                      {documentChunks.length > 0 && (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          <span className="text-blue-600">
+                            📚 Vector DB: {documentChunks.length} chunks ready for RAG search
+                          </span>
+                        </div>
+                      )}
+                      {isVectorizing && (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
+                          <span className="text-orange-600">
+                            🔄 Vectorizing documents...
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
