@@ -1192,19 +1192,6 @@ The uploaded files contain valuable economic information that would be analyzed 
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <a
-                    href="https://www.repec.org/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-green-50 transition-colors group"
-                  >
-                    <div>
-                      <h4 className="font-medium text-gray-900 group-hover:text-green-600">RePEc</h4>
-                      <p className="text-sm text-gray-600">Research Papers in Economics database</p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-green-600" />
-                  </a>
-                  
-                  <a
                     href="https://www.ssrn.com/"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1231,14 +1218,27 @@ The uploaded files contain valuable economic information that would be analyzed 
                   </a>
                   
                   <a
-                    href="http://www.pbc.gov.cn/"
+                    href="https://academic.oup.com/qje"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-green-50 transition-colors group"
                   >
                     <div>
-                      <h4 className="font-medium text-gray-900 group-hover:text-green-600">PBC Working Papers</h4>
-                      <p className="text-sm text-gray-600">People's Bank of China research</p>
+                      <h4 className="font-medium text-gray-900 group-hover:text-green-600">The Quarterly Journal of Economics</h4>
+                      <p className="text-sm text-gray-600">Premier economics journal published by Oxford University Press</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-green-600" />
+                  </a>
+                  
+                  <a
+                    href="https://www.aeaweb.org/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-green-50 transition-colors group"
+                  >
+                    <div>
+                      <h4 className="font-medium text-gray-900 group-hover:text-green-600">American Economic Association</h4>
+                      <p className="text-sm text-gray-600">Leading economics journals and research resources</p>
                     </div>
                     <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-green-600" />
                   </a>
