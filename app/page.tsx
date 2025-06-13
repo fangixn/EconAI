@@ -1,33 +1,15 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Upload, FileText, Send, MessageSquare, Brain, Sparkles, ArrowRight, Settings, Save, Key, Trash2, Download, AlertCircle, Eye, EyeOff, Menu, X, Bot, User, BookOpen, Users, TrendingUp, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
-  Brain, 
-  Upload, 
-  MessageSquare, 
-  BookOpen, 
-  Users, 
-  TrendingUp,
-  CheckCircle,
-  ArrowRight,
-  Menu,
-  X,
-  FileText,
-  Sparkles,
-  Send,
-  Bot,
-  User,
-  Settings,
-  Key,
-  Save
-} from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { API_CONFIGS, AVAILABLE_MODELS, ANALYSIS_API_PRIORITY, PERFORMANCE_SETTINGS } from '@/lib/apiConfig';
 
 interface ChatMessage {
   id: string;
@@ -58,15 +40,17 @@ interface UploadedFile {
   integrityInfo?: ContentIntegrityInfo;  // Add integrity tracking
 }
 
-interface ApiConfig {
+interface ApiKeyConfig {
   openai?: string;
-  anthropic?: string;
-  google?: string;
+  deepseek?: string;
+  gemini?: string;
+  claude?: string;
+  qwen?: string;
 }
 
 interface ApiSettings {
   enabled: boolean;
-  configs: ApiConfig;
+  configs: ApiKeyConfig;
 }
 
 // Vector search and RAG functionality
@@ -96,7 +80,7 @@ interface RAGContext {
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('chatgpt');
+  const [selectedModel, setSelectedModel] = useState('openai');
   const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -109,7 +93,7 @@ export default function Home() {
     enabled: false,
     configs: {}
   });
-  const [tempApiConfigs, setTempApiConfigs] = useState<ApiConfig>({});
+  const [tempApiConfigs, setTempApiConfigs] = useState<ApiKeyConfig>({});
 
   // Vector search and RAG states
   const [documentChunks, setDocumentChunks] = useState<DocumentChunk[]>([]);
@@ -118,9 +102,11 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<VectorSearchResult | null>(null);
 
   const aiModels = [
-    { id: 'chatgpt', name: 'ChatGPT', color: 'bg-green-500' },
-    { id: 'deepseek', name: 'DeepSeek', color: 'bg-blue-500' },
-    { id: 'gemini', name: 'Gemini', color: 'bg-purple-500' }
+    { id: 'openai', name: 'ChatGPT', color: 'bg-green-500', description: 'OpenAI GPT-3.5' },
+    { id: 'deepseek', name: 'DeepSeek', color: 'bg-blue-500', description: '深度求索AI模型' },
+    { id: 'gemini', name: 'Gemini', color: 'bg-purple-500', description: 'Google Gemini' },
+    { id: 'claude', name: 'Claude', color: 'bg-orange-500', description: 'Anthropic Claude' },
+    { id: 'qwen', name: 'Qwen', color: 'bg-red-500', description: '阿里云通义千问' }
   ];
 
   // Load saved API configurations on mount
@@ -141,8 +127,9 @@ export default function Home() {
 
   // Save API configurations
   const saveApiConfigs = () => {
+    const hasAnyKey = Object.values(tempApiConfigs).some(key => key && key.trim() !== '');
     setApiSettings(prev => ({
-      enabled: tempApiConfigs.openai || tempApiConfigs.google ? true : false,
+      enabled: hasAnyKey,
       configs: tempApiConfigs
     }));
     localStorage.setItem('econai-api-configs', JSON.stringify(tempApiConfigs));
@@ -301,12 +288,21 @@ export default function Home() {
     console.log(`📚 Vectorization complete: Processed ${allChunks.length} document chunks`);
   };
 
-  // Real AI API call function with RAG support
+  // Real AI API call function with enhanced support and RAG
   const callRealAI = async (message: string, model: string): Promise<string> => {
     const { configs } = apiSettings;
+    const config = API_CONFIGS[model];
+    const apiKey = configs[model as keyof typeof configs];
+    
+    if (!config) {
+      throw new Error(`Unsupported model: ${model}`);
+    }
+    
+    if (!apiKey) {
+      throw new Error(`API key not configured for ${config.name}`);
+    }
     
     let contextPrompt = message;
-    let ragContext: RAGContext | null = null;
     
     // Use RAG if vector search is enabled and we have document chunks
     if (vectorSearchEnabled && documentChunks.length > 0) {
@@ -317,12 +313,6 @@ export default function Home() {
         const retrievedContent = searchResult.chunks.map((chunk, index) => 
           `[Document Chunk ${index + 1}] (Source: ${chunk.metadata.fileName}, Chunk ${chunk.metadata.chunkIndex + 1}/${chunk.metadata.totalChunks}, Relevance: ${(chunk.relevanceScore! * 100).toFixed(1)}%)\n${chunk.content}`
         ).join('\n\n');
-        
-        ragContext = {
-          retrievedChunks: searchResult.chunks,
-          originalQuery: message,
-          contextSummary: `Found ${searchResult.chunks.length} relevant document chunks through vector search`
-        };
         
         contextPrompt = `As an economics expert, please answer the question based on the following relevant document content retrieved through vector search technology:
 
@@ -339,9 +329,9 @@ Please provide an in-depth economic analysis based on the above document excerpt
 
 Note: The above content is from user-uploaded documents, obtained through vector similarity search.`;
 
-                  console.log(`🔍 RAG Search: Found ${searchResult.chunks.length} relevant chunks, average relevance: ${(searchResult.chunks.reduce((sum, chunk) => sum + (chunk.relevanceScore || 0), 0) / searchResult.chunks.length * 100).toFixed(1)}%`);
+        console.log(`🔍 RAG Search: Found ${searchResult.chunks.length} relevant chunks for ${config.name}`);
       } else {
-        console.log('🔍 RAG search: No relevant content found, using general knowledge');
+        console.log(`🔍 RAG search: No relevant content found for ${config.name}, using general knowledge`);
         contextPrompt = `As an economics expert, user question: "${message}".
 
 Note: The user's uploaded documents have been searched, but no directly relevant content was found. Please answer based on general economic knowledge and suggest that the user may need to provide more relevant documents or more specific questions.`;
@@ -364,7 +354,6 @@ User Question: ${message}
 
 Please provide a detailed analysis based on the uploaded documents. If the documents don't contain relevant information to answer the question, please indicate that and provide general guidance.`;
       } else if (failedFiles.length > 0) {
-        // If there are files but content extraction failed
         const failedFileNames = failedFiles.map(f => f.name).join(', ');
         contextPrompt = `The user has uploaded ${failedFiles.length} file(s) (${failedFileNames}), but content extraction failed. 
 
@@ -380,87 +369,91 @@ Now, let me address your question based on general economics knowledge:`;
     }
     
     try {
-      if (model === 'chatgpt' && configs.openai) {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${configs.openai}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
-            messages: [
-              {
-                role: 'system',
-                content: 'You are an economics expert. Analyze uploaded documents and provide detailed, accurate responses about economic theories, concepts, and analysis based on the provided content.'
-              },
-              {
-                role: 'user',
-                content: contextPrompt
-              }
-            ],
-            max_tokens: 2000,
-            temperature: 0.7,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`OpenAI API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data.choices[0]?.message?.content || 'No response received';
-      }
+      console.log(`🚀 Calling ${config.name} API...`);
       
-      if (model === 'gemini' && configs.google) {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${configs.google}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `As an economics expert, please analyze the provided documents and respond to the question:\n\n${contextPrompt}`
-              }]
-            }]
-          }),
-        });
+      // 超时控制
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), config.timeout || PERFORMANCE_SETTINGS.DEFAULT_TIMEOUT);
 
-        if (!response.ok) {
-          throw new Error(`Gemini API error: ${response.status}`);
+      const url = config.getApiUrl ? config.getApiUrl(apiKey) : config.apiUrl;
+      const headers = config.buildHeaders(apiKey);
+      const body = config.buildBody(contextPrompt);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ ${config.name} API Error:`, response.status, errorText);
+        
+        // 详细的错误处理
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(`API密钥无效或权限不足（${config.name}）`);
+        } else if (response.status === 429) {
+          throw new Error(`API请求频率过高（${config.name}），请稍后重试`);
+        } else if (response.status >= 500) {
+          throw new Error(`${config.name} 服务器暂时不可用，请稍后重试`);
+        } else {
+          throw new Error(`${config.name} API错误: ${response.status} - ${errorText.substring(0, 200)}`);
         }
-
-        const data = await response.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response received';
       }
 
-      // Fallback for other models or missing API keys
-      throw new Error('API key not configured for selected model');
+      const data = await response.json();
+      const result = config.parseResponse(data);
+      
+      console.log(`✅ ${config.name} API调用成功`);
+      return result;
       
     } catch (error) {
-      console.error('AI API call failed:', error);
-      throw error;
+      console.error(`❌ ${config.name} API调用失败:`, error);
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error(`${config.name} API请求超时，请稍后重试`);
+        } else if (error.message.includes('fetch')) {
+          throw new Error(`网络连接错误，请检查网络设置`);
+        } else {
+          throw error;
+        }
+      } else {
+        throw new Error(`${config.name} API调用失败: 未知错误`);
+      }
     }
   };
 
   // Simulate AI response function
   const simulateAIResponse = (userMessage: string, model: string): string => {
     const responses = {
-      chatgpt: [
+      openai: [
         "This is a fascinating economics question. According to modern economic theory...",
         "From a macroeconomic perspective, this issue involves multiple aspects...",
         "Let's start by analyzing the fundamental principles of microeconomics..."
       ],
       deepseek: [
-        "Based on deep learning economic model analysis, I believe...",
-        "Through big data analysis and machine learning algorithms, we can see...",
-        "From an AI perspective, understanding this economic phenomenon..."
+        "基于深度学习经济模型分析，我认为...",
+        "通过大数据分析和机器学习算法，我们可以看到...",
+        "从AI角度来理解这个经济现象..."
       ],
       gemini: [
         "This economic concept can be understood from multiple dimensions...",
         "Combining historical data and current market trends, my analysis is...",
         "From the perspective of global economic integration..."
+      ],
+      claude: [
+        "Let me analyze this economic question with careful consideration...",
+        "From a comprehensive economic perspective, this involves several key factors...",
+        "I'll approach this economic problem systematically..."
+      ],
+      qwen: [
+        "从经济学角度来分析这个问题...",
+        "结合当前市场环境和政策背景，我的分析是...",
+        "根据经济理论和实践经验..."
       ]
     };
     
@@ -1410,7 +1403,31 @@ Suggested Solutions:
                         </div>
                         
                         <div>
-                          <Label htmlFor="google-key" className="flex items-center space-x-2 mb-2">
+                          <Label htmlFor="deepseek-key" className="flex items-center space-x-2 mb-2">
+                            <span>DeepSeek API Key</span>
+                            <a 
+                              href="https://platform.deepseek.com/api_keys" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              Get Key
+                            </a>
+                          </Label>
+                          <Input
+                            id="deepseek-key"
+                            type="password"
+                            placeholder="sk-..."
+                            value={tempApiConfigs.deepseek || ''}
+                            onChange={(e) => setTempApiConfigs(prev => ({
+                              ...prev,
+                              deepseek: e.target.value
+                            }))}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="gemini-key" className="flex items-center space-x-2 mb-2">
                             <span>Google AI API Key (for Gemini)</span>
                             <a 
                               href="https://aistudio.google.com/app/apikey" 
@@ -1422,24 +1439,73 @@ Suggested Solutions:
                             </a>
                           </Label>
                           <Input
-                            id="google-key"
+                            id="gemini-key"
                             type="password"
                             placeholder="AI..."
-                            value={tempApiConfigs.google || ''}
+                            value={tempApiConfigs.gemini || ''}
                             onChange={(e) => setTempApiConfigs(prev => ({
                               ...prev,
-                              google: e.target.value
+                              gemini: e.target.value
+                            }))}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="claude-key" className="flex items-center space-x-2 mb-2">
+                            <span>Anthropic API Key (for Claude)</span>
+                            <a 
+                              href="https://console.anthropic.com/settings/keys" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              Get Key
+                            </a>
+                          </Label>
+                          <Input
+                            id="claude-key"
+                            type="password"
+                            placeholder="sk-ant-..."
+                            value={tempApiConfigs.claude || ''}
+                            onChange={(e) => setTempApiConfigs(prev => ({
+                              ...prev,
+                              claude: e.target.value
+                            }))}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="qwen-key" className="flex items-center space-x-2 mb-2">
+                            <span>阿里云API Key (for Qwen)</span>
+                            <a 
+                              href="https://dashscope.console.aliyun.com/apiKey" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              Get Key
+                            </a>
+                          </Label>
+                          <Input
+                            id="qwen-key"
+                            type="password"
+                            placeholder="sk-..."
+                            value={tempApiConfigs.qwen || ''}
+                            onChange={(e) => setTempApiConfigs(prev => ({
+                              ...prev,
+                              qwen: e.target.value
                             }))}
                           />
                         </div>
                         
                         <div className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400">
-                          <h4 className="font-medium text-yellow-900 mb-2">Important Notes</h4>
+                          <h4 className="font-medium text-yellow-900 mb-2">重要提示</h4>
                           <ul className="text-sm text-yellow-800 space-y-1">
-                            <li>• API keys are stored locally in your browser</li>
-                            <li>• You will be charged by the AI service providers for usage</li>
-                            <li>• Always keep your API keys secure and never share them</li>
-                            <li>• Without API keys, the system will use simulated responses</li>
+                            <li>• API密钥仅存储在本地浏览器中，不会上传到我们的服务器</li>
+                            <li>• 使用API会产生费用，由相应的AI服务提供商收取</li>
+                            <li>• 请妥善保管您的API密钥，切勿分享给他人</li>
+                            <li>• 支持OpenAI、DeepSeek、Google、Anthropic、阿里云等多个服务商</li>
+                            <li>• 没有配置API密钥时，系统将使用模拟响应</li>
                           </ul>
                         </div>
                         
