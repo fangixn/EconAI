@@ -638,6 +638,236 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Economics Resources Section */}
+      <section className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Economics Knowledge Resources
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Curated collection of free, high-quality economics resources to enhance your research and understanding
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-12 mb-16">
+            {/* Government & International Organizations */}
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-3 text-xl">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <BookOpen className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <span>Government & International Reports</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <a
+                    href="https://www.federalreserve.gov/publications/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors group"
+                  >
+                    <div>
+                      <h4 className="font-medium text-gray-900 group-hover:text-blue-600">Federal Reserve Reports</h4>
+                      <p className="text-sm text-gray-600">Economic research and monetary policy insights</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                  </a>
+                  
+                  <a
+                    href="https://openknowledge.worldbank.org/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors group"
+                  >
+                    <div>
+                      <h4 className="font-medium text-gray-900 group-hover:text-blue-600">World Bank Open Knowledge</h4>
+                      <p className="text-sm text-gray-600">Global development and economic data</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                  </a>
+                  
+                  <a
+                    href="https://www.imf.org/en/Publications"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors group"
+                  >
+                    <div>
+                      <h4 className="font-medium text-gray-900 group-hover:text-blue-600">IMF Publications</h4>
+                      <p className="text-sm text-gray-600">International monetary and financial analysis</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                  </a>
+                  
+                  <a
+                    href="https://www.oecd.org/economic-outlook/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors group"
+                  >
+                    <div>
+                      <h4 className="font-medium text-gray-900 group-hover:text-blue-600">OECD Economic Outlook</h4>
+                      <p className="text-sm text-gray-600">Economic forecasts and policy analysis</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Academic Resources */}
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-3 text-xl">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Users className="h-6 w-6 text-green-600" />
+                  </div>
+                  <span>Academic & Open Access Resources</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <a
+                    href="https://www.repec.org/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-green-50 transition-colors group"
+                  >
+                    <div>
+                      <h4 className="font-medium text-gray-900 group-hover:text-green-600">RePEc</h4>
+                      <p className="text-sm text-gray-600">Research Papers in Economics database</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-green-600" />
+                  </a>
+                  
+                  <a
+                    href="https://www.ssrn.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-green-50 transition-colors group"
+                  >
+                    <div>
+                      <h4 className="font-medium text-gray-900 group-hover:text-green-600">SSRN Economics</h4>
+                      <p className="text-sm text-gray-600">Social Science Research Network papers</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-green-600" />
+                  </a>
+                  
+                  <a
+                    href="https://arxiv.org/list/econ/recent"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-green-50 transition-colors group"
+                  >
+                    <div>
+                      <h4 className="font-medium text-gray-900 group-hover:text-green-600">arXiv Economics</h4>
+                      <p className="text-sm text-gray-600">Open-access preprints in economics</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-green-600" />
+                  </a>
+                  
+                  <a
+                    href="http://www.pbc.gov.cn/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-green-50 transition-colors group"
+                  >
+                    <div>
+                      <h4 className="font-medium text-gray-900 group-hover:text-green-600">PBC Working Papers</h4>
+                      <p className="text-sm text-gray-600">People's Bank of China research</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-green-600" />
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Best Practices Section */}
+          <Card className="border-0 shadow-lg bg-white">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-3 text-xl">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-purple-600" />
+                </div>
+                <span>Best Practices for Economics Research</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                    Effective Questions to Ask
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-green-50 border-l-4 border-green-400 rounded-r">
+                      <p className="text-sm text-gray-700">"What are the key findings in the latest Fed monetary policy report?"</p>
+                    </div>
+                    <div className="p-3 bg-green-50 border-l-4 border-green-400 rounded-r">
+                      <p className="text-sm text-gray-700">"How does Adam Smith explain the role of specialization in The Wealth of Nations?"</p>
+                    </div>
+                    <div className="p-3 bg-green-50 border-l-4 border-green-400 rounded-r">
+                      <p className="text-sm text-gray-700">"What is the World Bank's 2024 global growth forecast?"</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                    <X className="h-5 w-5 text-red-600 mr-2" />
+                    Questions to Avoid
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-red-50 border-l-4 border-red-400 rounded-r">
+                      <p className="text-sm text-gray-700">"What does Chapter 3 of Mankiw's textbook say?" (Copyright protected)</p>
+                    </div>
+                    <div className="p-3 bg-red-50 border-l-4 border-red-400 rounded-r">
+                      <p className="text-sm text-gray-700">"Help me do my homework" (Focus on understanding concepts)</p>
+                    </div>
+                    <div className="p-3 bg-red-50 border-l-4 border-red-400 rounded-r">
+                      <p className="text-sm text-gray-700">Vague questions without specific context or documents</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-4">Research Tips</h4>
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <FileText className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <h5 className="font-medium text-gray-900 mb-2">Select Relevant Documents</h5>
+                    <p className="text-sm text-gray-600">Choose 3-5 related documents per conversation for best AI responses</p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <MessageSquare className="h-6 w-6 text-green-600" />
+                    </div>
+                    <h5 className="font-medium text-gray-900 mb-2">Ask Specific Questions</h5>
+                    <p className="text-sm text-gray-600">Frame clear, specific questions and request comparisons between sources</p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <CheckCircle className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <h5 className="font-medium text-gray-900 mb-2">Verify Information</h5>
+                    <p className="text-sm text-gray-600">Always verify AI responses with original sources for important decisions</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
