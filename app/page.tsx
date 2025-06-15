@@ -481,6 +481,17 @@ export default function Home() {
               </Card>
             ))}
           </div>
+          
+          {/* More Resources Button */}
+          <div className="text-center mt-12">
+            <Button
+              onClick={() => window.open('https://www.economicsweb.org/', '_blank')}
+              className="econai-button-primary px-8 py-3 text-base h-auto group"
+            >
+              More
+              <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
+            </Button>
+          </div>
         </section>
 
         {/* Settings Dialog */}
