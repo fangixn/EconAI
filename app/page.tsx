@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +12,7 @@ import { Settings, MessageCircle, Brain, TrendingUp, DollarSign, BarChart3, PieC
 import { API_CONFIGS } from '@/lib/apiConfig';
 import { useApiSettings } from '@/hooks/useApiSettings';
 import { ApiStatusIndicator } from '@/components/ApiStatusIndicator';
-import AdSense, { AdSenseScript } from '@/components/AdSense';
-import { AD_CONFIG } from '@/lib/adConfig';
+
 
 interface ApiSettings {
   [key: string]: string;
@@ -24,6 +23,37 @@ export default function Home() {
   const [selectedModel, setSelectedModel] = useState<string>('openai');
   const [question, setQuestion] = useState<string>('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 在主页加载 Google AdSense 脚本
+  useEffect(() => {
+    // 检查脚本是否已经存在，避免重复加载
+    if (document.querySelector('script[src*="adsbygoogle.js"]')) {
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8773372379395342';
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    
+    script.onload = () => {
+      console.log('Google AdSense script loaded successfully');
+    };
+    
+    script.onerror = () => {
+      console.error('Failed to load Google AdSense script');
+    };
+
+    document.head.appendChild(script);
+
+    // 清理函数：组件卸载时移除脚本
+    return () => {
+      const existingScript = document.querySelector('script[src*="adsbygoogle.js"]');
+      if (existingScript) {
+        existingScript.remove();
+      }
+    };
+  }, []);
   
   // Use custom hook to manage API settings
   const { 
@@ -121,9 +151,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      {/* 只在主页加载广告脚本 */}
-      <AdSenseScript clientId={AD_CONFIG.GOOGLE_AD_CLIENT} />
-      
       {/* Header */}
       <header className="border-b bg-white/95 backdrop-blur-md sticky top-0 z-50 shadow-sm transition-all duration-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -227,18 +254,6 @@ export default function Home() {
             >
               Try AI Chat
             </Button>
-          </div>
-        </section>
-
-        {/* 广告展示 */}
-        <section className="py-8 bg-gray-50">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <AdSense 
-              adSlot={AD_CONFIG.AD_SLOTS.HOME_MIDDLE_BANNER} 
-              adFormat={AD_CONFIG.AD_FORMATS.AUTO}
-              style={{ display: 'block', textAlign: 'center' }}
-              className="mb-4"
-            />
           </div>
         </section>
 
@@ -509,18 +524,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 底部广告展示 */}
-        <section className="py-12 bg-slate-50">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <AdSense 
-              adSlot={AD_CONFIG.AD_SLOTS.HOME_BOTTOM_BANNER} 
-              adFormat={AD_CONFIG.AD_FORMATS.AUTO}
-              style={{ display: 'block', textAlign: 'center' }}
-              className="mb-4"
-            />
-          </div>
-        </section>
-
         {/* Settings Dialog */}
         <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
           <DialogContent className="econai-dialog econai-api-dialog max-w-2xl overflow-hidden flex flex-col">
@@ -645,12 +648,12 @@ export default function Home() {
             {/* Contact */}
             <div>
               <h4 className="font-semibold mb-4 text-slate-200">Contact</h4>
-              <div className="space-y-1 text-sm text-slate-300">
-                <div className="flex items-center">
-                  <MessageCircle className="h-4 w-4 mr-2 text-slate-400" />
-                  <a href="mailto:fangin1230@gmail.com" className="hover:text-blue-400 transition-colors">
-                    fangin1230@gmail.com
-                  </a>
+                <div className="space-y-1 text-sm text-slate-300">
+                  <div className="flex items-center">
+                    <MessageCircle className="h-4 w-4 mr-2 text-slate-400" />
+                    <a href="mailto:fangin1230@gmail.com" className="hover:text-blue-400 transition-colors">
+                      fangin1230@gmail.com
+                    </a>
                 </div>
               </div>
             </div>
