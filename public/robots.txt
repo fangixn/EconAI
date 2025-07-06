@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
+
+# 网站地图位置
+Sitemap: https://econai.vercel.app/sitemap.xml 

@@ -149,7 +149,7 @@ export default function Home() {
                 className="text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 font-medium"
                 onClick={() => scrollToSection('how-it-works')}
               >
-                How It Works
+                AI Chat
               </Button>
               <Button 
                 variant="ghost" 
@@ -225,7 +225,7 @@ export default function Home() {
               onClick={() => scrollToSection('how-it-works')}
               className="px-6 py-3 text-base h-auto border-2 hover:bg-slate-50"
             >
-              Learn How It Works
+              Try AI Chat
             </Button>
           </div>
         </section>
@@ -602,7 +602,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="mt-20 bg-slate-900 text-white">
         <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+          <div className="grid md:grid-cols-3 gap-8 mb-8">
             {/* Brand Section */}
             <div className="md:col-span-1">
               <div className="flex items-center mb-4">
@@ -624,11 +624,10 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4 text-slate-200">Platform</h4>
               <ul className="space-y-2 text-sm text-slate-300">
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">How It Works</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">AI Models</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Research Tools</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">API Documentation</a></li>
+                <li><a href="#features" className="hover:text-blue-400 transition-colors">Features</a></li>
+                <li><a href="#how-it-works" className="hover:text-blue-400 transition-colors">AI Chat</a></li>
+                <li><a href="#get-started" className="hover:text-blue-400 transition-colors">Get Started</a></li>
+                <li><a href="/chat" className="hover:text-blue-400 transition-colors">Chat Interface</a></li>
               </ul>
             </div>
 
@@ -636,33 +635,22 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4 text-slate-200">Resources</h4>
               <ul className="space-y-2 text-sm text-slate-300">
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Research Guidelines</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Academic Journals</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Government Reports</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Best Practices</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">User Guide</a></li>
+                <li><a href="#resources" className="hover:text-blue-400 transition-colors">Academic Resources</a></li>
+                <li><a href="#try-now" className="hover:text-blue-400 transition-colors">Best Practices</a></li>
+                <li><a href="https://www.federalreserve.gov/publications/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition-colors">Federal Reserve</a></li>
+                <li><a href="https://www.worldbank.org/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition-colors">World Bank</a></li>
               </ul>
             </div>
 
-            {/* Support & Legal */}
+            {/* Contact */}
             <div>
-              <h4 className="font-semibold mb-4 text-slate-200">Support & Legal</h4>
-              <ul className="space-y-2 text-sm text-slate-300 mb-4">
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Data Security</a></li>
-              </ul>
-              
-              <div className="border-t border-slate-700 pt-4">
-                <h5 className="font-medium mb-2 text-slate-200">Contact</h5>
-                <div className="space-y-1 text-sm text-slate-300">
-                  <div className="flex items-center">
-                    <MessageCircle className="h-4 w-4 mr-2 text-slate-400" />
-                    <a href="mailto:fangin1230@gmail.com" className="hover:text-blue-400 transition-colors">
-                      fangin1230@gmail.com
-                    </a>
-                  </div>
+              <h4 className="font-semibold mb-4 text-slate-200">Contact</h4>
+              <div className="space-y-1 text-sm text-slate-300">
+                <div className="flex items-center">
+                  <MessageCircle className="h-4 w-4 mr-2 text-slate-400" />
+                  <a href="mailto:fangin1230@gmail.com" className="hover:text-blue-400 transition-colors">
+                    fangin1230@gmail.com
+                  </a>
                 </div>
               </div>
             </div>

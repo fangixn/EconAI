@@ -82,12 +82,12 @@ export default function AdSense({
 
     // 只在生产环境执行广告代码
     if (!isDev && isAdSlotConfigured(adSlot)) {
-      try {
-        if (typeof window !== 'undefined') {
+    try {
+      if (typeof window !== 'undefined') {
           // 等待脚本加载完成
           const checkAdsbyGoogle = () => {
             if (window.adsbygoogle) {
-              (window.adsbygoogle = window.adsbygoogle || []).push({});
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
             } else {
               // 如果脚本还没加载，等待一段时间再试
               setTimeout(checkAdsbyGoogle, 1000);
@@ -96,10 +96,10 @@ export default function AdSense({
           
           // 延迟执行，确保脚本已加载
           setTimeout(checkAdsbyGoogle, 100);
-        }
-      } catch (error) {
-        console.error('AdSense error:', error);
       }
+    } catch (error) {
+      console.error('AdSense error:', error);
+    }
     }
   }, [adSlot]);
 

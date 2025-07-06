@@ -1,0 +1,29 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景渐变 -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 圆角矩形背景 -->
+  <rect width="512" height="512" rx="96" fill="url(#gradient)"/>
+  
+  <!-- 大脑图标 -->
+  <g transform="translate(128, 128)">
+    <path d="M256 192C256 245.019 213.019 288 160 288C106.981 288 64 245.019 64 192C64 138.981 106.981 96 160 96C213.019 96 256 138.981 256 192Z" 
+          fill="white" opacity="0.9"/>
+    <path d="M160 128C186.51 128 208 149.49 208 176C208 202.51 186.51 224 160 224C133.49 224 112 202.51 112 176C112 149.49 133.49 128 160 128Z" 
+          fill="white" opacity="0.7"/>
+    <path d="M144 160C152.837 160 160 152.837 160 144C160 135.163 152.837 128 144 128C135.163 128 128 135.163 128 144C128 152.837 135.163 160 144 160Z" 
+          fill="white"/>
+    <path d="M192 160C200.837 160 208 152.837 208 144C208 135.163 200.837 128 192 128C183.163 128 176 135.163 176 144C176 152.837 183.163 160 192 160Z" 
+          fill="white"/>
+    <path d="M160 208C168.837 208 176 200.837 176 192C176 183.163 168.837 176 160 176C151.163 176 144 183.163 144 192C144 200.837 151.163 208 160 208Z" 
+          fill="white"/>
+  </g>
+  
+  <!-- 文字 E -->
+  <text x="256" y="380" font-family="Arial, sans-serif" font-size="120" font-weight="bold" text-anchor="middle" fill="white">E</text>
+</svg> 
