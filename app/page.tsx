@@ -12,6 +12,8 @@ import { Settings, MessageCircle, Brain, TrendingUp, DollarSign, BarChart3, PieC
 import { API_CONFIGS } from '@/lib/apiConfig';
 import { useApiSettings } from '@/hooks/useApiSettings';
 import { ApiStatusIndicator } from '@/components/ApiStatusIndicator';
+import AdSense, { AdSenseScript } from '@/components/AdSense';
+import { AD_CONFIG } from '@/lib/adConfig';
 
 interface ApiSettings {
   [key: string]: string;
@@ -119,6 +121,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
+      {/* 只在主页加载广告脚本 */}
+      <AdSenseScript clientId={AD_CONFIG.GOOGLE_AD_CLIENT} />
+      
       {/* Header */}
       <header className="border-b bg-white/95 backdrop-blur-md sticky top-0 z-50 shadow-sm transition-all duration-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -225,7 +230,17 @@ export default function Home() {
           </div>
         </section>
 
-
+        {/* 广告展示 */}
+        <section className="py-8 bg-gray-50">
+          <div className="max-w-4xl mx-auto px-6 text-center">
+            <AdSense 
+              adSlot={AD_CONFIG.AD_SLOTS.HOME_MIDDLE_BANNER} 
+              adFormat={AD_CONFIG.AD_FORMATS.AUTO}
+              style={{ display: 'block', textAlign: 'center' }}
+              className="mb-4"
+            />
+          </div>
+        </section>
 
         {/* AI Expert Selection & Quick Start Chat */}
         <section id="how-it-works" className="mb-16">
@@ -491,6 +506,18 @@ export default function Home() {
               More
               <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
             </Button>
+          </div>
+        </section>
+
+        {/* 底部广告展示 */}
+        <section className="py-12 bg-slate-50">
+          <div className="max-w-4xl mx-auto px-6 text-center">
+            <AdSense 
+              adSlot={AD_CONFIG.AD_SLOTS.HOME_BOTTOM_BANNER} 
+              adFormat={AD_CONFIG.AD_FORMATS.AUTO}
+              style={{ display: 'block', textAlign: 'center' }}
+              className="mb-4"
+            />
           </div>
         </section>
 
