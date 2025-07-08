@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- 主页 - 最高优先级 -->
   <url>
-    <loc>https://econai.vercel.app/</loc>
+    <loc>https://economicsai.org/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <lastmod>2025-01-27</lastmod>
   </url>
+  
+  <!-- AI聊天页面 - 核心功能页面 -->
   <url>
-    <loc>https://econai.vercel.app/chat</loc>
+    <loc>https://economicsai.org/chat</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
     <lastmod>2025-01-27</lastmod>
   </url>
 </urlset> 
